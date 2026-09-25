@@ -1,0 +1,6 @@
+@Dainynas.Api_HostAddress = http://localhost:5272
+
+GET {{Dainynas.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
