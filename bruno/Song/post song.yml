@@ -1,0 +1,28 @@
+info:
+  name: post song
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://localhost:5272/api/songs
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Vai tu rugeli",
+        "lyrics": "Demonstracinis folklorinės dainos tekstas",
+        "recordingYear": 1978,
+        "recordingPlace": "Varėnos r.",
+        "externalArchiveUrl": "https://example.com/archive/song-1",
+        "audioUrl": "https://example.com/audio/song-1.mp3",
+        "isPublic": true,
+        "performerId": 3
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
