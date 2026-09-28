@@ -1,6 +1,4 @@
-const BASE_URL = process.env.BASE_URL ?? "http://localhost:5272";
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+const BASE_URL = process.env.BASE_URL ?? "http://localhost:8080";
 
 async function request(path, options = {}) {
     const response = await fetch(`${BASE_URL}${path}`, {
@@ -42,12 +40,14 @@ async function main() {
     // 1. POST performer
     const performerResponse = await request("/api/performers", {
         method: "POST",
-        body: JSON.stringify({
-            name: "Ona Grigaliūnienė",
-            birthYear: 1890,
-            residence: "Slabada k., Kaišiadorių sen., Kaišiadorių r. sav., Kauno apsk",
-            photoUrl: "https://www.tautosakos-rankrastynas.lt/imgHashed/c2k9OTAwJmZhaWxhcz12YWl6ZGFzL0xUUkZ0LzIzMC5qcGc=.jpg"
-        })
+        body: JSON.stringify(
+            {
+                name: "Ona Grigaliūnienė",
+                birthYear: 1890,
+                residence: "Slabada k., Kaišiadorių sen., Kaišiadorių r. sav., Kauno apsk",
+                photoUrl: "https://www.tautosakos-rankrastynas.lt/imgHashed/c2k9OTAwJmZhaWxhcz12YWl6ZGFzL0xUUkZ0LzIzMC5qcGc=.jpg"
+            }
+        )
     });
 
     assert(performerResponse.status === 201, "POST performer expected 201");
@@ -192,11 +192,8 @@ async function main() {
     const reorderedAlbum = await request(`/api/albums/${albumId}`);
 
     assert(reorderedAlbum.status === 200, "GET reordered album expected 200");
-    assert(
-        reorderedAlbum.body.songs[0].id === songIds[2],
-        "Album song order was not updated"
-    );
-    pass("Album song order updated");
+    assert(reorderedAlbum.body.songs[0].id === songIds[2], "Album song order was not updated");
+    pass("GET album song order updated");
 
     // 12. GET performers
     const performers = await request("/api/performers");
@@ -241,7 +238,7 @@ async function main() {
     const missingPerformer = await request(`/api/performers/${performerId}`);
 
     assert(missingPerformer.status === 404, "Missing performer expected 404");
-    pass("Missing resource -> 404");
+    pass("GET performer / Missing resource -> 404");
 
     // 400 test
     const invalidPerformer = await request("/api/performers", {
@@ -254,7 +251,7 @@ async function main() {
     });
 
     assert(invalidPerformer.status === 400, "Invalid payload expected 400");
-    pass("Invalid payload -> 400");
+    pass("POST performer / Invalid payload -> 400");
 
     console.log("\n✓ ALL API TESTS PASSED");
 }

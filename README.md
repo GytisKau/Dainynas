@@ -1,5 +1,15 @@
 # Dainynas - Elektroninis folklorinių dainų dainynas
 
+Kol kas dainynas turi tik OpenAPI padarytas pagal pirmo laboratorinio darbo reikalavimus
+
+```bash
+docker compose down -v
+docker compose up --build -d
+node tests.js
+```
+
+OpenApi - http://localhost:8080/openapi/v1.json
+
 ## Sistemos paskirtis
 
 Kuriama internetinė sistema, skirta folklorinių dainų įrašams kaupti, saugoti, aprašyti, ieškoti ir klausytis. Sistema sujungtų archyvinę folkloro medžiagą su naudotojų kuriamu turiniu.
