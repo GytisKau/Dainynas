@@ -8,6 +8,5 @@ public class Album
     public string? Description { get; set; }
     public bool IsPublic { get; set; }
     
-    public ICollection<AlbumSong> AlbumSongs { get; set; } =
-        new List<AlbumSong>();
+    public ICollection<AlbumSong> AlbumSongs { get; set; } = [];
 }

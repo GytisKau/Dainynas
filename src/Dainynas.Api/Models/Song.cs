@@ -15,6 +15,5 @@ public class Song
     public int PerformerId { get; set; }
     public Performer Performer { get; set; } = null!;
 
-    public ICollection<AlbumSong> AlbumSongs { get; set; } =
-        new List<AlbumSong>();
+    public ICollection<AlbumSong> AlbumSongs { get; set; } = [];
 }

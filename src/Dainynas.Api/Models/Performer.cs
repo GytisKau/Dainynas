@@ -9,5 +9,5 @@ public class Performer
     public string? Residence { get; set; }
     public string? PhotoUrl { get; set; }
 
-    public ICollection<Song> Songs { get; set; } = new List<Song>();
+    public ICollection<Song> Songs { get; set; } = [];
 }
