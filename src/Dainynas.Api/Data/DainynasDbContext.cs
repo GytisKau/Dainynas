@@ -5,6 +5,7 @@ namespace Dainynas.Api.Data;
 
 public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : DbContext(options)
 {
+    public DbSet<User> Users => Set<User>();
     public DbSet<Song> Songs => Set<Song>();
     public DbSet<Performer> Performers => Set<Performer>();
     public DbSet<Album> Albums => Set<Album>();
@@ -12,6 +13,10 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>()
+            .HasIndex(user => user.Email)
+            .IsUnique();
+
         modelBuilder.Entity<AlbumSong>()
             .HasKey(albumSong => new
             {

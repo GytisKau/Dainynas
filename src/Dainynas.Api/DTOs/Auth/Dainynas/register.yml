@@ -1,0 +1,22 @@
+info:
+  name: register
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://localhost:5272/api/auth/register
+  body:
+    type: json
+    data: |-
+      {
+        "email": "user@dainynas.lt",
+        "password": "LabaiSlaptas123!"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,12 +1,15 @@
-const BASE_URL = process.env.BASE_URL ?? "http://localhost:8080";
+const BASE_URL = process.env.BASE_URL ?? "http://localhost:5272";
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@dainynas.lt";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 async function request(path, options = {}) {
     const response = await fetch(`${BASE_URL}${path}`, {
+        ...options,
         headers: {
             "Content-Type": "application/json",
             ...(options.headers ?? {})
-        },
-        ...options
+        }
     });
 
     let body = null;
@@ -35,7 +38,250 @@ function pass(name) {
 }
 
 async function main() {
+    assert(
+        ADMIN_PASSWORD,
+        "ADMIN_PASSWORD environment variable is required"
+    );
+
     console.log(`Testing API: ${BASE_URL}\n`);
+
+    console.log("User Authentication & authorization\n");
+
+    const testEmail = `user-${Date.now()}@dainynas.lt`;
+    const testPassword = "LabaiSlaptas123!";
+
+    // AUTH 1: Register
+    const registerResponse = await request("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+            email: testEmail,
+            password: testPassword
+        })
+    });
+
+    assert(
+        registerResponse.status === 201,
+        `REGISTER expected 201, got ${registerResponse.status}`
+    );
+
+    assert(
+        typeof registerResponse.body.token === "string",
+        "REGISTER did not return JWT token"
+    );
+
+    assert(
+        registerResponse.body.role === "User",
+        "New user should have User role"
+    );
+
+    const token = registerResponse.body.token;
+
+    pass("REGISTER user -> 201");
+
+
+    // AUTH 2: JWT turi role claim
+    function decodeJwtPayload(jwt) {
+        const parts = jwt.split(".");
+
+        assert(parts.length === 3, "Invalid JWT format");
+
+        const payload = parts[1]
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+
+        const padded =
+            payload + "=".repeat((4 - payload.length % 4) % 4);
+
+        return JSON.parse(
+            Buffer.from(padded, "base64").toString("utf8")
+        );
+    }
+
+    const jwtPayload = decodeJwtPayload(token);
+
+    const roleClaim =
+        jwtPayload[
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        ] ?? jwtPayload.role;
+
+    assert(
+        roleClaim === "User",
+        `JWT expected role User, got ${roleClaim}`
+    );
+
+    pass("JWT contains role claim -> User");
+
+
+    // AUTH 3: Duplicate registration
+    const duplicateRegister = await request("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+            email: testEmail,
+            password: testPassword
+        })
+    });
+
+    assert(
+        duplicateRegister.status === 400,
+        `Duplicate REGISTER expected 400, got ${duplicateRegister.status}`
+    );
+
+    pass("Duplicate registration -> 400");
+
+
+    // AUTH 4: Login
+    const loginResponse = await request("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+            email: testEmail,
+            password: testPassword
+        })
+    });
+
+    assert(
+        loginResponse.status === 200,
+        `LOGIN expected 200, got ${loginResponse.status}`
+    );
+
+    assert(
+        typeof loginResponse.body.token === "string",
+        "LOGIN did not return JWT token"
+    );
+
+    const loginToken = loginResponse.body.token;
+
+    pass("LOGIN -> 200");
+
+
+    // AUTH 5: Wrong password
+    const badLoginResponse = await request("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+            email: testEmail,
+            password: "BlogasSlaptazodis123!"
+        })
+    });
+
+    assert(
+        badLoginResponse.status === 401,
+        `Bad LOGIN expected 401, got ${badLoginResponse.status}`
+    );
+
+    pass("LOGIN with wrong password -> 401");
+
+
+    // AUTH 6: /me without token
+    const meWithoutToken = await request("/api/auth/me");
+
+    assert(
+        meWithoutToken.status === 401,
+        `/me without JWT expected 401, got ${meWithoutToken.status}`
+    );
+
+    pass("GET /auth/me without JWT -> 401");
+
+
+    // AUTH 7: /me with token
+    const meResponse = await request("/api/auth/me", {
+        headers: {
+            Authorization: `Bearer ${loginToken}`
+        }
+    });
+
+    assert(
+        meResponse.status === 200,
+        `/me with JWT expected 200, got ${meResponse.status}`
+    );
+
+    assert(
+        meResponse.body.email === testEmail,
+        "Authenticated user email does not match"
+    );
+
+    assert(
+        meResponse.body.role === "User",
+        "Authenticated user should have User role"
+    );
+
+    pass("GET /auth/me with JWT -> 200");
+
+
+    // AUTH 8: User tries Admin endpoint
+    const adminResponse = await request("/api/auth/admin", {
+        headers: {
+            Authorization: `Bearer ${loginToken}`
+        }
+    });
+
+    assert(
+        adminResponse.status === 403,
+        `/admin with User JWT expected 403, got ${adminResponse.status}`
+    );
+
+    pass("GET /auth/admin with User role -> 403");
+
+    console.log();
+
+    console.log("Admin Authentication & authorization\n");
+
+    const adminLoginResponse = await request("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+            email: ADMIN_EMAIL,
+            password: ADMIN_PASSWORD
+        })
+    });
+
+    assert(
+        adminLoginResponse.status === 200,
+        `Admin LOGIN expected 200, got ${adminLoginResponse.status}`
+    );
+
+    assert(
+        adminLoginResponse.body.role === "Admin",
+        "Admin user should have Admin role"
+    );
+
+    const adminToken = adminLoginResponse.body.token;
+
+    pass("LOGIN admin -> 200");
+
+
+    // Patikriname Admin rolę pačiame JWT
+    const adminJwtPayload = decodeJwtPayload(adminToken);
+
+    const adminRoleClaim =
+        adminJwtPayload[
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        ] ?? adminJwtPayload.role;
+
+    assert(
+        adminRoleClaim === "Admin",
+        `JWT expected Admin role, got ${adminRoleClaim}`
+    );
+
+    pass("JWT contains role claim -> Admin");
+
+
+    // Admin gali pasiekti Admin endpoint
+    const adminEndpointResponse =
+        await request("/api/auth/admin", {
+            headers: {
+                Authorization: `Bearer ${adminToken}`
+            }
+        });
+
+    assert(
+        adminEndpointResponse.status === 200,
+        `/admin with Admin JWT expected 200, got ${adminEndpointResponse.status}`
+    );
+
+    pass("GET /auth/admin with Admin role -> 200");
+
+    console.log();
+
+    console.log("Performers, Songs and Albums\n");
+
 
     // 1. POST performer
     const performerResponse = await request("/api/performers", {
