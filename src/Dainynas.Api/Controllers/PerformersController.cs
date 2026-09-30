@@ -1,4 +1,6 @@
 using Dainynas.Api.Data;
+using Dainynas.Api.DTOs.Comments;
+using Dainynas.Api.DTOs.Common;
 using Dainynas.Api.DTOs.Performers;
 using Dainynas.Api.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -13,21 +15,49 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
     private readonly DainynasDbContext _context = context;
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<PerformerDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<PerformerDto>>> GetAll()
+    [ProducesResponseType(typeof(PagedResponse<PerformerDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResponse<PerformerDto>>> GetAll(
+        string? name = null,
+        int page = 1, int pageSize = 10)
     {
-        var performers = await _context.Performers
-            .Select(p => new PerformerDto
+        if (page < 1)
+            return BadRequest(new { message = "Page must be greater than 0." });
+
+        if (pageSize < 1 || pageSize > 100)
+            return BadRequest(new { message = "PageSize must be between 1 and 100." });
+
+        var query = _context.Performers.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(name))
+            query = query.Where(performer => performer.Name.ToLower().Contains(name.ToLower()));
+
+        var totalItems = await query.CountAsync();
+
+        var performers = await query
+            .OrderBy(performer => performer.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(performer => new PerformerDto
             {
-                Id = p.Id,
-                Name = p.Name,
-                BirthYear = p.BirthYear,
-                Residence = p.Residence,
-                PhotoUrl = p.PhotoUrl
+                Id = performer.Id,
+                Name = performer.Name,
+                BirthYear = performer.BirthYear,
+                Residence = performer.Residence,
+                PhotoUrl = performer.PhotoUrl
             })
             .ToListAsync();
 
-        return Ok(performers);
+        return Ok(new PagedResponse<PerformerDto>
+        {
+            Items = performers,
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = (int)Math.Ceiling(
+                totalItems / (double)pageSize
+            )
+        });
     }
 
     [HttpGet("{id:int}")]
@@ -128,5 +158,53 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpGet("{performerId:int}/songs/{songId:int}/comments")]
+    [ProducesResponseType(typeof(IEnumerable<CommentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IEnumerable<CommentDto>>> GetSongComments(
+        int performerId,
+        int songId)
+    {
+        var performerExists = await _context.Performers
+            .AnyAsync(performer => performer.Id == performerId);
+
+        if (!performerExists)
+        {
+            return NotFound(new
+            {
+                message = $"Performer with id {performerId} does not exist."
+            });
+        }
+
+        var songExists = await _context.Songs
+            .AnyAsync(song =>
+                song.Id == songId &&
+                song.PerformerId == performerId);
+
+        if (!songExists)
+        {
+            return NotFound(new
+            {
+                message =
+                    $"Song with id {songId} does not belong to performer {performerId}."
+            });
+        }
+
+        var comments = await _context.Comments
+            .Where(comment => comment.SongId == songId)
+            .OrderByDescending(comment => comment.CreatedAt)
+            .Select(comment => new CommentDto
+            {
+                Id = comment.Id,
+                Text = comment.Text,
+                AuthorName = comment.AuthorName,
+                CreatedAt = comment.CreatedAt,
+                SongId = comment.SongId
+            })
+            .ToListAsync();
+
+        return Ok(comments);
     }
 }

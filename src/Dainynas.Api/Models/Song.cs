@@ -16,4 +16,6 @@ public class Song
     public Performer Performer { get; set; } = null!;
 
     public ICollection<AlbumSong> AlbumSongs { get; set; } = [];
+    
+    public ICollection<Comment> Comments { get; set; } = [];
 }

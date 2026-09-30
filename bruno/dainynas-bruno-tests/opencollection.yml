@@ -1,0 +1,30 @@
+opencollection: 1.0.0
+
+info:
+  name: Dainynas API Tests
+
+request:
+  variables:
+    - name: token
+      value: ""
+      disabled: true
+    - name: performerId
+      value: ""
+      disabled: true
+    - name: songId
+      value: ""
+      disabled: true
+    - name: commentId
+      value: ""
+      disabled: true
+    - name: albumId
+      value: ""
+      disabled: true
+
+bundled: false
+
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git

@@ -1,0 +1,39 @@
+info:
+  name: Reject invalid performer birth year
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/Performers"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Invalid performer",
+        "birthYear": 1799,
+        "residence": "X",
+        "photoUrl": null
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("netinkami gimimo metai grąžina 400", function () {
+          expect(res.status).to.equal(400);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,51 @@
+info:
+  name: Create album
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/Albums"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Bruno Test Album",
+        "description": "Automated API test album",
+        "isPublic": true,
+        "songIds": [
+          "{{songId}}"
+        ]
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 201 && res.body?.id != null) {
+          bru.setVar("albumId", res.body.id);
+        }
+    - type: tests
+      code: |-
+        test("albumo sukūrimas grąžina 201", function () { expect(res.status).to.equal(201); });
+        test("albumas turi ID ir dainas", function () {
+          expect(res.body.id).to.exist;
+          expect(res.body.title).to.equal("Bruno Test Album");
+          expect(res.body.songs).to.be.an("array");
+          expect(res.body.songs.some(x => String(x.id) === String(bru.getVar("songId")))).to.equal(true);
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

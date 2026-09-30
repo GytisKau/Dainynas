@@ -3,6 +3,13 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:5272";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@dainynas.lt";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
+const created = {
+    performerIds: [],
+    songIds: [],
+    albumIds: [],
+    commentIds: []
+};
+
 async function request(path, options = {}) {
     const response = await fetch(`${BASE_URL}${path}`, {
         ...options,
@@ -35,6 +42,44 @@ function assert(condition, message) {
 
 function pass(name) {
     console.log(`✓ ${name}`);
+}
+
+async function cleanup() {
+    console.log("\nCleaning up test data...");
+
+    for (const commentId of created.commentIds.reverse()) {
+        try {
+            await request(`/api/comments/${commentId}`, {
+                method: "DELETE"
+            });
+        } catch {}
+    }
+
+    for (const albumId of created.albumIds.reverse()) {
+        try {
+            await request(`/api/albums/${albumId}`, {
+                method: "DELETE"
+            });
+        } catch {}
+    }
+
+    for (const songId of created.songIds.reverse()) {
+        try {
+            await request(`/api/songs/${songId}`, {
+                method: "DELETE"
+            });
+        } catch {}
+    }
+
+    for (const performerId of created.performerIds.reverse()) {
+        try {
+            await request(`/api/performers/${performerId}`, {
+                method: "DELETE"
+            });
+        } catch {}
+    }
+
+    console.log("Cleanup finished.");
 }
 
 async function main() {
@@ -278,9 +323,8 @@ async function main() {
 
     pass("GET /auth/admin with Admin role -> 200");
 
-    console.log();
 
-    console.log("Performers, Songs and Albums\n");
+    console.log("\nPerformers,\n");
 
 
     // 1. POST performer
@@ -298,6 +342,7 @@ async function main() {
 
     assert(performerResponse.status === 201, "POST performer expected 201");
     const performerId = performerResponse.body.id;
+    created.performerIds.push(performerId);
     pass("POST performer -> 201");
 
     // 2. GET performer
@@ -306,6 +351,8 @@ async function main() {
     assert(getPerformer.status === 200, "GET performer expected 200");
     assert(getPerformer.body.name === "Ona Grigaliūnienė", "Wrong performer returned");
     pass("GET performer -> 200");
+
+    console.log("\nSongs\n")
 
     // 3-5. POST songs
     const songs = [
@@ -352,6 +399,7 @@ async function main() {
         assert(response.status === 201, `POST song "${song.title}" expected 201`);
 
         songIds.push(response.body.id);
+        created.songIds.push(response.body.id);
         pass(`POST song "${song.title}" -> 201`);
     }
 
@@ -359,8 +407,237 @@ async function main() {
     const getSongs = await request("/api/songs");
 
     assert(getSongs.status === 200, "GET songs expected 200");
-    assert(Array.isArray(getSongs.body), "GET songs did not return array");
+    assert(Array.isArray(getSongs.body.items), "GET songs.items did not return array");
     pass("GET songs -> 200");
+
+    const pagedSongs = await request("/api/songs?page=1&pageSize=2");
+
+    assert(pagedSongs.status === 200,            `Paged songs expected 200, got ${pagedSongs.status}`);
+    assert(Array.isArray(pagedSongs.body.items), "Paged songs should contain items array");
+    assert(pagedSongs.body.items.length <= 2,    "Page should contain at most 2 songs");
+    assert(pagedSongs.body.page === 1,           "Expected page 1");
+    assert(pagedSongs.body.pageSize === 2,       "Expected pageSize 2");
+
+    pass("GET songs with pagination -> 200");
+
+    const filteredSongs = await request(`/api/songs?performerId=${performerId}&page=1&pageSize=10`);
+
+    assert(filteredSongs.status === 200, `Filtered songs expected 200, got ${filteredSongs.status}`);
+    assert(filteredSongs.body.items
+        .every(song => song.performerId === performerId), "Song filtering by performerId failed");
+
+    pass("GET songs with filtering -> 200");
+
+    const invalidPage = await request("/api/songs?page=0&pageSize=10");
+
+    assert(invalidPage.status === 400, `Invalid page expected 400, got ${invalidPage.status}`);
+
+    pass("GET songs with invalid page -> 400");
+
+
+    console.log("\nComments\n");
+
+
+    const commentAuthor = "Test User";
+    const commentResponse = await request("/api/comments", {
+        method: "POST",
+        body: JSON.stringify({
+            text: "Labai graži ir įdomi folklorinė daina.",
+            authorName: commentAuthor,
+            songId: songIds[0]
+        })
+    });
+
+    assert(commentResponse.status === 201,
+        `POST comment expected 201, got ${commentResponse.status}`);
+
+    assert(commentResponse.body.text === "Labai graži ir įdomi folklorinė daina.",
+        "Created comment text does not match");
+
+    assert(commentResponse.body.songId === songIds[0], "Created comment SongId does not match");
+
+    const commentId = commentResponse.body.id;
+
+    created.commentIds.push(commentId);
+
+    pass("POST comment -> 201");
+
+
+    const getCommentResponse = await request(`/api/comments/${commentId}`);
+ 
+    assert(
+        getCommentResponse.status === 200,
+        `GET comment expected 200, got ${getCommentResponse.status}`);
+
+    assert(
+        getCommentResponse.body.id === commentId,
+        "GET comment returned wrong id");
+
+    assert(
+        getCommentResponse.body.authorName === commentAuthor,
+        "GET comment returned wrong author");
+
+    pass("GET comment by id -> 200");
+
+
+    const commentsListResponse =
+        await request("/api/comments?page=1&pageSize=5");
+
+    assert(commentsListResponse.status === 200,
+        `GET comments expected 200, got ${commentsListResponse.status}`);
+
+    assert(Array.isArray(commentsListResponse.body.items),
+        "Comments response should contain items array");
+
+    assert(commentsListResponse.body.page === 1,
+        "Comments page should be 1");
+
+    assert(commentsListResponse.body.pageSize === 5,
+        "Comments pageSize should be 5");
+
+    assert(commentsListResponse.body.items.some(comment => comment.id === commentId),
+        "Created comment was not found in comments list");
+
+    pass("GET comments with pagination -> 200");
+
+
+    const filteredCommentsResponse =
+        await request(`/api/comments?authorName=${encodeURIComponent(commentAuthor)}&page=1&pageSize=10`);
+
+    assert(
+        filteredCommentsResponse.status === 200,
+        `Filtered comments expected 200, got ${filteredCommentsResponse.status}`
+    );
+
+    assert(
+        filteredCommentsResponse.body.items.some(
+            comment =>
+                comment.id === commentId &&
+                comment.authorName === commentAuthor
+        ),
+        "Comment filtering by authorName failed"
+    );
+
+    pass("GET comments with author filter -> 200");
+
+    const textFilterResponse = await request("/api/comments?text=folklorinė&page=1&pageSize=10");
+
+    assert(textFilterResponse.status === 200,
+        `Filtered comments by text expected 200, got ${textFilterResponse.status}`);
+
+    assert(textFilterResponse.body.items.some(
+            comment => comment.id === commentId
+        ),
+        "Comment filtering by text failed");
+
+    pass("GET comments with text filter -> 200");
+
+    const updateCommentResponse =
+        await request(`/api/comments/${commentId}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                text: "Atnaujintas testinis komentaras.",
+                authorName: "Updated User",
+                songId: songIds[0]
+            })
+        });
+
+    assert(
+        updateCommentResponse.status === 204,
+        `PUT comment expected 204, got ${updateCommentResponse.status}`
+    );
+
+    pass("PUT comment -> 204");
+
+    const updatedCommentResponse = await request(`/api/comments/${commentId}`);
+
+    assert(updatedCommentResponse.status === 200,
+        `GET updated comment expected 200, got ${updatedCommentResponse.status}`);
+
+    assert(updatedCommentResponse.body.text === "Atnaujintas testinis komentaras.",
+        "Updated comment text does not match");
+
+    assert(updatedCommentResponse.body.authorName === "Updated User",
+        "Updated comment author does not match");
+
+    pass("GET updated comment -> 200");
+
+    const scopedCommentsResponse =
+        await request(`/api/performers/${performerId}/songs/${songIds[0]}/comments`);
+
+    assert(scopedCommentsResponse.status === 200,
+        `Hierarchical comments expected 200, got ${scopedCommentsResponse.status}`);
+
+    assert(Array.isArray(scopedCommentsResponse.body),
+        "Hierarchical comments response should be an array");
+
+    assert(scopedCommentsResponse.body.some(
+            comment => comment.id === commentId),
+        "Hierarchical endpoint did not return created comment");
+
+    pass("GET /performers/{performerId}/songs/{songId}/comments -> 200");
+
+    const invalidScopedCommentsResponse =
+        await request(
+            `/api/performers/${performerId}/songs/999999/comments`
+        );
+
+    assert(
+        invalidScopedCommentsResponse.status === 404,
+        `Invalid hierarchical scope expected 404, got ${invalidScopedCommentsResponse.status}`
+    );
+
+    pass("Hierarchical comments with invalid song -> 404");
+
+    const invalidCommentResponse =
+        await request("/api/comments", {
+            method: "POST",
+            body: JSON.stringify({
+                text: "Šis komentaras neturėtų būti sukurtas.",
+                authorName: "Test User",
+                songId: 999999
+            })
+        });
+
+    assert(invalidCommentResponse.status === 400,
+        `Comment with invalid SongId expected 400, got ${invalidCommentResponse.status}`);
+
+    pass("POST comment with invalid SongId -> 400");
+
+    const invalidCommentsPageResponse =
+        await request("/api/comments?page=0&pageSize=10");
+
+    assert(
+        invalidCommentsPageResponse.status === 400,
+        `Invalid comments page expected 400, got ${invalidCommentsPageResponse.status}`
+    );
+
+    pass("GET comments with invalid page -> 400");
+
+    const deleteCommentResponse =
+        await request(`/api/comments/${commentId}`, { method: "DELETE"});
+
+    created.commentIds = created.commentIds.filter(id => id !== commentId);
+
+    assert(deleteCommentResponse.status === 204,
+        `DELETE comment expected 204, got ${deleteCommentResponse.status}`);
+
+    pass("DELETE comment -> 204");
+
+    const deletedCommentResponse =
+        await request(`/api/comments/${commentId}`);
+
+    assert(
+        deletedCommentResponse.status === 404,
+        `GET deleted comment expected 404, got ${deletedCommentResponse.status}`
+    );
+
+    pass("GET deleted comment -> 404");
+
+
+
+    console.log("\nAlbums\n")
+
 
     // 7. POST album
     const createAlbum = await request("/api/albums", {
@@ -376,7 +653,7 @@ async function main() {
     assert(createAlbum.status === 201, "POST album expected 201");
 
     const albumId = createAlbum.body.id;
-
+    created.albumIds.push(albumId);
     assert(createAlbum.body.songs.length === 3, "Album should contain 3 songs");
     pass("POST album -> 201");
 
@@ -498,12 +775,21 @@ async function main() {
 
     assert(invalidPerformer.status === 400, "Invalid payload expected 400");
     pass("POST performer / Invalid payload -> 400");
-
-    console.log("\n✓ ALL API TESTS PASSED");
 }
 
-main().catch(error => {
-    console.error("\n✗ TEST FAILED");
-    console.error(error.message);
-    process.exit(1);
-});
+async function run() {
+    try {
+        await main();
+
+        console.log("\nALL API TESTS PASSED");
+    } catch (error) {
+        console.error("\nTEST FAILED");
+        console.error(error.message);
+
+        process.exitCode = 1;
+    } finally {
+        await cleanup();
+    }
+}
+
+run();

@@ -1,0 +1,28 @@
+info:
+  name: Get album by ID
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/Albums/{{albumId}}"
+  headers:
+    - name: Accept
+      value: application/json
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("grąžina 200", function () { expect(res.status).to.equal(200); });
+        test("albumo ID sutampa", function () {
+          expect(String(res.body.id)).to.equal(String(bru.getVar("albumId")));
+        });
+        test("songs yra masyvas", function () { expect(res.body.songs).to.be.an("array"); });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

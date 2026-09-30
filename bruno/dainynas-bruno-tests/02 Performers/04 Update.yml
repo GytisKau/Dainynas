@@ -1,0 +1,42 @@
+info:
+  name: Update performer
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/Performers/{{performerId}}"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Bruno Test Performer Updated",
+        "birthYear": 1951,
+        "residence": "Kaunas",
+        "photoUrl": "https://example.com/performer-updated.jpg"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("statusas yra 204", function () {
+          expect(res.status).to.equal(204);
+        });
+        test("atsakymas nėra serverio klaida", function () {
+          expect(res.status).to.be.below(500);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5

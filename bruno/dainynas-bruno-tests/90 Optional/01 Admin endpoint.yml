@@ -1,0 +1,32 @@
+info:
+  name: Admin endpoint (requires adminToken)
+  type: http
+  seq: 2
+  tags:
+    - optional
+    - admin
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/Auth/admin"
+  auth:
+    type: bearer
+    token: "{{adminToken}}"
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("statusas yra 200", function () {
+          expect(res.status).to.equal(200);
+        });
+        test("atsakymas nėra serverio klaida", function () {
+          expect(res.status).to.be.below(500);
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

@@ -1,0 +1,45 @@
+info:
+  name: Filter comments and paginate
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/Comments?text=Bruno&authorName=Bruno%20Tester&page=1&pageSize=5"
+  headers:
+    - name: Accept
+      value: application/json
+  params:
+    - name: text
+      value: Bruno
+      type: query
+    - name: authorName
+      value: Bruno Tester
+      type: query
+    - name: page
+      value: "1"
+      type: query
+    - name: pageSize
+      value: "5"
+      type: query
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("grąžina 200", function () { expect(res.status).to.equal(200); });
+        test("atsakymas puslapiuotas", function () {
+          expect(res.body.items).to.be.an("array");
+          expect(Number(res.body.page)).to.equal(1);
+          expect(Number(res.body.pageSize)).to.equal(5);
+        });
+        test("filtras randa sukurtą komentarą", function () {
+          expect(res.body.items.some(x => String(x.id) === String(bru.getVar("commentId")))).to.equal(true);
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

@@ -10,13 +10,20 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var keyVaultUri = builder.Configuration["KeyVault:Uri"];
+var useKeyVault =
+    builder.Configuration.GetValue<bool>("UseKeyVault");
 
-if (!string.IsNullOrWhiteSpace(keyVaultUri))
+if (useKeyVault)
 {
+    var keyVaultUri = builder.Configuration["KeyVault:Uri"]
+        ?? throw new InvalidOperationException(
+            "KeyVault URI is missing."
+        );
+
     builder.Configuration.AddAzureKeyVault(
         new Uri(keyVaultUri),
-        new DefaultAzureCredential());
+        new DefaultAzureCredential()
+    );
 }
 
 var jwtKey = builder.Configuration["Jwt:Key"]

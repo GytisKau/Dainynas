@@ -1,0 +1,44 @@
+info:
+  name: Register dynamic test user
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/Auth/register"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{testEmail}}",
+        "password": "{{testPassword}}"
+      }
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        bru.setVar("testEmail", `bruno.${unique}@example.test`);
+    - type: after-response
+      code: |-
+        if (res.status === 201 && res.body?.token) {
+          bru.setVar("token", res.body.token);
+        }
+    - type: tests
+      code: |-
+        test("registracija grąžina 201", function () {
+          expect(res.status).to.equal(201);
+        });
+        test("grąžinamas JWT ir rolė", function () {
+          expect(res.body).to.have.property("token").that.is.a("string").and.not.empty;
+          expect(res.body).to.have.property("expiresAt").that.is.a("string");
+          expect(res.body).to.have.property("role").that.is.a("string");
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

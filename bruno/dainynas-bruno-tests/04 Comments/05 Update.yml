@@ -1,0 +1,42 @@
+info:
+  name: Update comment
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/Comments/{{commentId}}"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "text": "Bruno automated comment updated",
+        "authorName": "Bruno Tester",
+        "songId": "{{songId}}"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("statusas yra 204", function () {
+          expect(res.status).to.equal(204);
+        });
+        test("atsakymas nėra serverio klaida", function () {
+          expect(res.status).to.be.below(500);
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

@@ -1,0 +1,47 @@
+info:
+  name: Create comment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/Comments"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "text": "Bruno automated comment",
+        "authorName": "Bruno Tester",
+        "songId": "{{songId}}"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 201 && res.body?.id != null) {
+          bru.setVar("commentId", res.body.id);
+        }
+    - type: tests
+      code: |-
+        test("komentaro sukūrimas grąžina 201", function () { expect(res.status).to.equal(201); });
+        test("komentaras susietas su daina", function () {
+          expect(res.body.text).to.equal("Bruno automated comment");
+          expect(Number(res.body.songId)).to.equal(Number(bru.getVar("songId")));
+          expect(res.body.createdAt).to.be.a("string");
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

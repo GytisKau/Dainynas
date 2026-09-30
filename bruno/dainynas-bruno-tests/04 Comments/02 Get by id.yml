@@ -1,0 +1,27 @@
+info:
+  name: Get comment by ID
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/Comments/{{commentId}}"
+  headers:
+    - name: Accept
+      value: application/json
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("grąžina 200", function () { expect(res.status).to.equal(200); });
+        test("ID sutampa", function () {
+          expect(String(res.body.id)).to.equal(String(bru.getVar("commentId")));
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

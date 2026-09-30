@@ -10,6 +10,7 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
     public DbSet<Performer> Performers => Set<Performer>();
     public DbSet<Album> Albums => Set<Album>();
     public DbSet<AlbumSong> AlbumSongs => Set<AlbumSong>();
+    public DbSet<Comment> Comments => Set<Comment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,11 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
             .HasOne(albumSong => albumSong.Song)
             .WithMany(song => song.AlbumSongs)
             .HasForeignKey(albumSong => albumSong.SongId);
+
+        modelBuilder.Entity<Comment>()
+            .HasOne(comment => comment.Song)
+            .WithMany(song => song.Comments)
+            .HasForeignKey(comment => comment.SongId);
 
         base.OnModelCreating(modelBuilder);
     }

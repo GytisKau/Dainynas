@@ -1,0 +1,53 @@
+info:
+  name: Create song
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/Songs"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Bruno Test Song",
+        "lyrics": "Oi testas testas",
+        "recordingYear": 1980,
+        "recordingPlace": "Vilnius",
+        "externalArchiveUrl": "https://example.com/archive/song",
+        "audioUrl": "https://example.com/audio/song.mp3",
+        "isPublic": true,
+        "performerId": "{{performerId}}"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 201 && res.body?.id != null) {
+          bru.setVar("songId", res.body.id);
+        }
+    - type: tests
+      code: |-
+        test("dainos sukūrimas grąžina 201", function () { expect(res.status).to.equal(201); });
+        test("grąžinama sukurta daina", function () {
+          expect(res.body.id).to.exist;
+          expect(res.body.title).to.equal("Bruno Test Song");
+          expect(Number(res.body.performerId)).to.equal(Number(bru.getVar("performerId")));
+          expect(res.body.isPublic).to.equal(true);
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

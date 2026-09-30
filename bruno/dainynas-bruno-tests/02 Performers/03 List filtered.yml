@@ -1,0 +1,41 @@
+info:
+  name: Filter performers and paginate
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/Performers?name=Bruno%20Test&page=1&pageSize=5"
+  params:
+    - name: name
+      value: Bruno Test
+      type: query
+    - name: page
+      value: "1"
+      type: query
+    - name: pageSize
+      value: "5"
+      type: query
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("grąžina 200", function () { expect(res.status).to.equal(200); });
+        test("atsakymas yra puslapiuotas", function () {
+          expect(res.body.items).to.be.an("array");
+          expect(Number(res.body.page)).to.equal(1);
+          expect(Number(res.body.pageSize)).to.equal(5);
+          expect(res.body).to.have.property("totalItems");
+          expect(res.body).to.have.property("totalPages");
+        });
+        test("filtras randa sukurtą atlikėją", function () {
+          expect(res.body.items.some(x => String(x.id) === String(bru.getVar("performerId")))).to.equal(true);
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

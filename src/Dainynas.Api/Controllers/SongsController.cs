@@ -1,5 +1,6 @@
 using Dainynas.Api.Data;
 using Dainynas.Api.DTOs.Songs;
+using Dainynas.Api.DTOs.Common;
 using Dainynas.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,47 +14,60 @@ public class SongsController(DainynasDbContext context) : ControllerBase
     private readonly DainynasDbContext _context = context;
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<SongDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<SongDto>>> GetAll(
-        [FromQuery] string? title,
-        [FromQuery] int? year,
-        [FromQuery] int? performerId)
+    [ProducesResponseType(typeof(PagedResponse<SongDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResponse<SongDto>>> GetAll(
+        string? title = null, int? year = null, int? performerId = null,
+        int page = 1, int pageSize = 10)
     {
+        if (page < 1)
+            return BadRequest(new { message = "Page must be greater than 0." });
+
+        if (pageSize < 1 || pageSize > 100)
+            return BadRequest(new { message = "PageSize must be between 1 and 100." });
+
         var query = _context.Songs.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(title))
-        {
-            query = query.Where(s =>
-                s.Title.ToLower().Contains(title.ToLower()));
-        }
+            query = query.Where(song => song.Title.ToLower().Contains(title.ToLower()));
 
         if (year.HasValue)
-        {
-            query = query.Where(s => s.RecordingYear == year.Value);
-        }
+            query = query.Where(song => song.RecordingYear == year.Value);
 
         if (performerId.HasValue)
-        {
-            query = query.Where(s => s.PerformerId == performerId.Value);
-        }
+            query = query.Where(song => song.PerformerId == performerId.Value);
+
+        var totalItems = await query.CountAsync();
 
         var songs = await query
-            .Select(s => new SongDto
+            .OrderBy(song => song.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(song => new SongDto
             {
-                Id = s.Id,
-                Title = s.Title,
-                Lyrics = s.Lyrics,
-                RecordingYear = s.RecordingYear,
-                RecordingPlace = s.RecordingPlace,
-                ExternalArchiveUrl = s.ExternalArchiveUrl,
-                AudioUrl = s.AudioUrl,
-                IsPublic = s.IsPublic,
-                PerformerId = s.PerformerId,
-                PerformerName = s.Performer.Name
+                Id = song.Id,
+                Title = song.Title,
+                Lyrics = song.Lyrics,
+                RecordingYear = song.RecordingYear,
+                RecordingPlace = song.RecordingPlace,
+                ExternalArchiveUrl = song.ExternalArchiveUrl,
+                AudioUrl = song.AudioUrl,
+                IsPublic = song.IsPublic,
+                PerformerId = song.PerformerId,
+                PerformerName = song.Performer.Name
             })
             .ToListAsync();
 
-        return Ok(songs);
+        return Ok(new PagedResponse<SongDto>
+        {
+            Items = songs,
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = (int)Math.Ceiling(
+                totalItems / (double)pageSize
+            )
+        });
     }
 
     [HttpGet("{id:int}")]
