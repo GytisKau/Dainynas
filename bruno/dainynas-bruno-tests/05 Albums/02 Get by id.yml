@@ -18,7 +18,25 @@ runtime:
         test("albumo ID sutampa", function () {
           expect(String(res.body.id)).to.equal(String(bru.getVar("albumId")));
         });
-        test("songs yra masyvas", function () { expect(res.body.songs).to.be.an("array"); });
+        test("songs yra masyvas", function () {
+          expect(res.body.songs).to.be.an("array");
+        });
+        test("turi album hypermedia nuorodas", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links.self.href).to.equal(`/api/albums/${bru.getVar("albumId")}`);
+          expect(res.body.links.self.method).to.equal("GET");
+          expect(res.body.links.update.method).to.equal("PUT");
+          expect(res.body.links.delete.method).to.equal("DELETE");
+        });
+        test("albumo dainos turi nuorodas", function () {
+          expect(res.body.songs).to.be.an("array");
+          res.body.songs.forEach(function (song) {
+            expect(song).to.have.property("links");
+            expect(song.links).to.have.property("song");
+            expect(song.links.song.href).to.equal(`/api/songs/${song.id}`);
+            expect(song.links.song.method).to.equal("GET");
+          });
+        });
 
 settings:
   encodeUrl: false

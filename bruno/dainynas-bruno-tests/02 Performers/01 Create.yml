@@ -6,11 +6,6 @@ info:
 http:
   method: POST
   url: "{{baseUrl}}/api/Performers"
-  headers:
-    - name: Accept
-      value: application/json
-    - name: Content-Type
-      value: application/json
   body:
     type: json
     data: |-
@@ -40,9 +35,14 @@ runtime:
           expect(res.body.birthYear).to.equal(1950);
           expect(res.body.residence).to.equal("Vilnius");
         });
+        test("sukurtas resursas turi hypermedia", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links.self.href).to.equal(`/api/performers/${res.body.id}`);
+        });
 
 settings:
-  encodeUrl: true
+  encodeUrl: false
   timeout: 5000
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true

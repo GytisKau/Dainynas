@@ -24,6 +24,15 @@ runtime:
           expect(res.body).to.have.property("performerId");
           expect(res.body).to.have.property("performerName");
         });
+        test("turi song hypermedia nuorodas", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links.self.href).to.equal(`/api/songs/${bru.getVar("songId")}`);
+          expect(res.body.links.self.method).to.equal("GET");
+          expect(res.body.links.performer.href).to.equal(`/api/performers/${bru.getVar("performerId")}`);
+          expect(res.body.links.comments.href).to.equal(`/api/performers/${bru.getVar("performerId")}/songs/${bru.getVar("songId")}/comments`);
+          expect(res.body.links.update.method).to.equal("PUT");
+          expect(res.body.links.delete.method).to.equal("DELETE");
+        });
 
 settings:
   encodeUrl: false

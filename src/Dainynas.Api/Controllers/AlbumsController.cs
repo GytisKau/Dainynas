@@ -1,5 +1,6 @@
 using Dainynas.Api.Data;
 using Dainynas.Api.DTOs.Albums;
+using Dainynas.Api.DTOs.Common;
 using Dainynas.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +46,9 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             })
             .ToListAsync();
 
+        foreach (var album in albums)
+            AddHypermedia(album);
+
         return Ok(albums);
     }
 
@@ -78,6 +82,8 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         {
             return NotFound();
         }
+
+        AddHypermedia(album);
 
         return Ok(album);
     }
@@ -140,7 +146,28 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        var result = await GetAlbumDto(album.Id);
+        var result = await _context.Albums
+            .Where(a => a.Id == album.Id)
+            .Select(a => new AlbumDto
+            {
+                Id = a.Id,
+                Title = a.Title,
+                Description = a.Description,
+                IsPublic = a.IsPublic,
+
+                Songs = a.AlbumSongs
+                    .OrderBy(albumSong => albumSong.Position)
+                    .Select(albumSong => new AlbumSongDto
+                    {
+                        Id = albumSong.Song.Id,
+                        Title = albumSong.Song.Title,
+                        Position = albumSong.Position
+                    })
+                    .ToList()
+            })
+            .SingleAsync();
+
+        AddHypermedia(result);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -242,27 +269,48 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         return NoContent();
     }
 
-    private async Task<AlbumDto> GetAlbumDto(int id)
+    private static void AddLinks(AlbumDto album)
     {
-        return await _context.Albums
-            .Where(a => a.Id == id)
-            .Select(a => new AlbumDto
+        album.Links = new Dictionary<string, LinkDto>
+        {
+            ["self"] = new()
             {
-                Id = a.Id,
-                Title = a.Title,
-                Description = a.Description,
-                IsPublic = a.IsPublic,
+                Href = $"/api/albums/{album.Id}",
+                Method = "GET"
+            },
 
-                Songs = a.AlbumSongs
-                    .OrderBy(albumSong => albumSong.Position)
-                    .Select(albumSong => new AlbumSongDto
-                    {
-                        Id = albumSong.Song.Id,
-                        Title = albumSong.Song.Title,
-                        Position = albumSong.Position
-                    })
-                    .ToList()
-            })
-            .SingleAsync();
+            ["update"] = new()
+            {
+                Href = $"/api/albums/{album.Id}",
+                Method = "PUT"
+            },
+
+            ["delete"] = new()
+            {
+                Href = $"/api/albums/{album.Id}",
+                Method = "DELETE"
+            }
+        };
+    }
+
+    private static void AddSongLinks(AlbumDto album)
+    {
+        foreach (var song in album.Songs)
+        {
+            song.Links = new Dictionary<string, LinkDto>
+            {
+                ["song"] = new()
+                {
+                    Href = $"/api/songs/{song.Id}",
+                    Method = "GET"
+                }
+            };
+        }
+    }
+
+    private static void AddHypermedia(AlbumDto album)
+    {
+        AddLinks(album);
+        AddSongLinks(album);
     }
 }

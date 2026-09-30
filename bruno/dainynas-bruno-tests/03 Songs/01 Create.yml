@@ -44,6 +44,10 @@ runtime:
           expect(Number(res.body.performerId)).to.equal(Number(bru.getVar("performerId")));
           expect(res.body.isPublic).to.equal(true);
         });
+        test("sukurtas resursas turi hypermedia", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links.self.href).to.equal(`/api/songs/${res.body.id}`);
+        });
 
 settings:
   encodeUrl: false

@@ -51,6 +51,9 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
             })
             .ToListAsync();
 
+        foreach(var comment in comments)
+            AddLinks(comment);
+
         var response = new PagedResponse<CommentDto>
         {
             Items = comments,
@@ -86,6 +89,8 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         {
             return NotFound();
         }
+
+        AddLinks(comment);
 
         return Ok(comment);
     }
@@ -125,6 +130,8 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
             CreatedAt = comment.CreatedAt,
             SongId = comment.SongId
         };
+
+        AddLinks(response);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -184,5 +191,35 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private static void AddLinks(CommentDto comment)
+    {
+        comment.Links = new Dictionary<string, LinkDto>
+        {
+            ["self"] = new()
+            {
+                Href = $"/api/comments/{comment.Id}",
+                Method = "GET"
+            },
+
+            ["song"] = new()
+            {
+                Href = $"/api/songs/{comment.SongId}",
+                Method = "GET"
+            },
+
+            ["update"] = new()
+            {
+                Href = $"/api/comments/{comment.Id}",
+                Method = "PUT"
+            },
+
+            ["delete"] = new()
+            {
+                Href = $"/api/comments/{comment.Id}",
+                Method = "DELETE"
+            }
+        };
     }
 }

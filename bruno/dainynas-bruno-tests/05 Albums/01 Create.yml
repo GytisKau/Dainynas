@@ -42,6 +42,10 @@ runtime:
           expect(res.body.songs).to.be.an("array");
           expect(res.body.songs.some(x => String(x.id) === String(bru.getVar("songId")))).to.equal(true);
         });
+        test("sukurtas resursas turi hypermedia", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links.self.href).to.equal(`/api/albums/${res.body.id}`);
+        });
 
 settings:
   encodeUrl: false

@@ -1,0 +1,23 @@
+info:
+  name: Performer profile not found
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/performers/999999/profile"
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("neegzistuojantis performer grąžina 404", function () {
+          expect(res.status).to.equal(404);
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

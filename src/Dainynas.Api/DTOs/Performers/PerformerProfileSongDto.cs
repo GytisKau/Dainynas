@@ -1,13 +1,16 @@
 using Dainynas.Api.DTOs.Common;
 
-namespace Dainynas.Api.DTOs.Albums;
+namespace Dainynas.Api.DTOs.Performers;
 
-public class AlbumSongDto
+public class PerformerProfileSongDto
 {
     public int Id { get; set; }
 
     public string Title { get; set; } = string.Empty;
-    public int Position { get; set; }
+
+    public int? RecordingYear { get; set; }
+
+    public bool IsPublic { get; set; }
 
     public Dictionary<string, LinkDto> Links { get; set; } = [];
 }

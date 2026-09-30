@@ -58,6 +58,10 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             })
             .ToListAsync();
 
+
+        foreach(var song in songs)
+            AddLinks(song);
+
         return Ok(new PagedResponse<SongDto>
         {
             Items = songs,
@@ -96,6 +100,8 @@ public class SongsController(DainynasDbContext context) : ControllerBase
         {
             return NotFound();
         }
+
+        AddLinks(song);
 
         return Ok(song);
     }
@@ -144,6 +150,8 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             PerformerId = song.PerformerId,
             PerformerName = performer.Name
         };
+
+        AddLinks(result);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -207,5 +215,42 @@ public class SongsController(DainynasDbContext context) : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private static void AddLinks(SongDto song)
+    {
+        song.Links = new Dictionary<string, LinkDto>
+        {
+            ["self"] = new()
+            {
+                Href = $"/api/songs/{song.Id}",
+                Method = "GET"
+            },
+
+            ["performer"] = new()
+            {
+                Href = $"/api/performers/{song.PerformerId}",
+                Method = "GET"
+            },
+
+            ["comments"] = new()
+            {
+                Href =
+                    $"/api/performers/{song.PerformerId}/songs/{song.Id}/comments",
+                Method = "GET"
+            },
+
+            ["update"] = new()
+            {
+                Href = $"/api/songs/{song.Id}",
+                Method = "PUT"
+            },
+
+            ["delete"] = new()
+            {
+                Href = $"/api/songs/{song.Id}",
+                Method = "DELETE"
+            }
+        };
     }
 }

@@ -9,8 +9,6 @@ http:
   headers:
     - name: Accept
       value: application/json
-  auth:
-    type: none
 
 runtime:
   scripts:
@@ -21,9 +19,22 @@ runtime:
           expect(String(res.body.id)).to.equal(String(bru.getVar("performerId")));
           expect(res.body.name).to.equal("Bruno Test Performer");
         });
+        test("turi performer hypermedia nuorodas", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links).to.have.property("self");
+          expect(res.body.links.self.href).to.equal(`/api/performers/${bru.getVar("performerId")}`);
+          expect(res.body.links.self.method).to.equal("GET");
+          expect(res.body.links).to.have.property("songs");
+          expect(res.body.links.songs.href).to.equal(`/api/performers/${bru.getVar("performerId")}/songs`);
+          expect(res.body.links).to.have.property("update");
+          expect(res.body.links.update.method).to.equal("PUT");
+          expect(res.body.links).to.have.property("delete");
+          expect(res.body.links.delete.method).to.equal("DELETE");
+        });
 
 settings:
-  encodeUrl: true
+  encodeUrl: false
   timeout: 5000
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true

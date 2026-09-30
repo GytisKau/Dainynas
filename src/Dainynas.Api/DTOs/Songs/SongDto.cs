@@ -1,3 +1,5 @@
+using Dainynas.Api.DTOs.Common;
+
 namespace Dainynas.Api.DTOs.Songs;
 
 public class SongDto
@@ -14,4 +16,6 @@ public class SongDto
 
     public int PerformerId { get; set; }
     public string PerformerName { get; set; } = string.Empty;
+
+    public Dictionary<string, LinkDto> Links { get; set; } = [];
 }

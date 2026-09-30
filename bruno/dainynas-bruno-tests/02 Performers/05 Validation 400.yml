@@ -1,7 +1,7 @@
 info:
   name: Reject invalid performer birth year
   type: http
-  seq: 5
+  seq: 6
 
 http:
   method: POST

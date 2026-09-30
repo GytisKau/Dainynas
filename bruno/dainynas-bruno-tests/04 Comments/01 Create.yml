@@ -38,6 +38,10 @@ runtime:
           expect(Number(res.body.songId)).to.equal(Number(bru.getVar("songId")));
           expect(res.body.createdAt).to.be.a("string");
         });
+        test("sukurtas resursas turi hypermedia", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links.self.href).to.equal(`/api/comments/${res.body.id}`);
+        });
 
 settings:
   encodeUrl: false

@@ -18,6 +18,14 @@ runtime:
         test("ID sutampa", function () {
           expect(String(res.body.id)).to.equal(String(bru.getVar("commentId")));
         });
+        test("turi comment hypermedia nuorodas", function () {
+          expect(res.body).to.have.property("links");
+          expect(res.body.links.self.href).to.equal(`/api/comments/${bru.getVar("commentId")}`);
+          expect(res.body.links.self.method).to.equal("GET");
+          expect(res.body.links.song.href).to.equal(`/api/songs/${bru.getVar("songId")}`);
+          expect(res.body.links.update.method).to.equal("PUT");
+          expect(res.body.links.delete.method).to.equal("DELETE");
+        });
 
 settings:
   encodeUrl: false

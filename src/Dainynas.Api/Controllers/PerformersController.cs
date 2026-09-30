@@ -48,6 +48,9 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             })
             .ToListAsync();
 
+        foreach (var performer in performers)
+            AddLinks(performer);
+
         return Ok(new PagedResponse<PerformerDto>
         {
             Items = performers,
@@ -82,6 +85,8 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             return NotFound();
         }
 
+        AddLinks(performer);
+
         return Ok(performer);
     }
 
@@ -110,6 +115,8 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             Residence = performer.Residence,
             PhotoUrl = performer.PhotoUrl
         };
+
+        AddLinks(result);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -205,6 +212,144 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             })
             .ToListAsync();
 
+        foreach (var comment in comments)
+            AddCommentLinks(comment);
+
         return Ok(comments);
+    }
+
+    [HttpGet("{id:int}/profile")]
+    [ProducesResponseType(typeof(PerformerProfileDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PerformerProfileDto>> GetProfile(int id)
+    {
+        var profile = await _context.Performers
+            .Where(performer => performer.Id == id)
+            .Select(performer => new PerformerProfileDto
+            {
+                Id = performer.Id,
+                Name = performer.Name,
+                BirthYear = performer.BirthYear,
+                Residence = performer.Residence,
+                PhotoUrl = performer.PhotoUrl,
+
+                SongCount = performer.Songs.Count,
+
+                Songs = performer.Songs
+                    .OrderBy(song => song.Id)
+                    .Select(song => new PerformerProfileSongDto
+                    {
+                        Id = song.Id,
+                        Title = song.Title,
+                        RecordingYear = song.RecordingYear,
+                        IsPublic = song.IsPublic
+                    })
+                    .ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        if (profile is null)
+        {
+            return NotFound(new
+            {
+                message = $"Performer with id {id} does not exist."
+            });
+        }
+
+        profile.Links = new Dictionary<string, LinkDto>
+        {
+            ["self"] = new()
+            {
+                Href = $"/api/performers/{profile.Id}/profile",
+                Method = "GET"
+            },
+
+            ["performer"] = new()
+            {
+                Href = $"/api/performers/{profile.Id}",
+                Method = "GET"
+            },
+
+            ["songs"] = new()
+            {
+                Href = $"/api/performers/{profile.Id}/songs",
+                Method = "GET"
+            }
+        };
+
+        foreach (var song in profile.Songs)
+        {
+            song.Links = new Dictionary<string, LinkDto>
+            {
+                ["self"] = new()
+                {
+                    Href = $"/api/songs/{song.Id}",
+                    Method = "GET"
+                },
+
+                ["comments"] = new()
+                {
+                    Href =
+                        $"/api/performers/{profile.Id}/songs/{song.Id}/comments",
+                    Method = "GET"
+                }
+            };
+        }
+
+        return Ok(profile);
+    }
+
+    private static void AddLinks(PerformerDto performer)
+    {
+        performer.Links = new Dictionary<string, LinkDto>
+        {
+            ["self"] = new()
+            {
+                Href = $"/api/performers/{performer.Id}",
+                Method = "GET"
+            },
+
+            ["songs"] = new()
+            {
+                Href = $"/api/performers/{performer.Id}/songs",
+                Method = "GET"
+            },
+
+            ["profile"] = new()
+            {
+                Href = $"/api/performers/{performer.Id}/profile",
+                Method = "GET"
+            },
+
+            ["update"] = new()
+            {
+                Href = $"/api/performers/{performer.Id}",
+                Method = "PUT"
+            },
+
+            ["delete"] = new()
+            {
+                Href = $"/api/performers/{performer.Id}",
+                Method = "DELETE"
+            }
+        };
+    }
+
+    private static void AddCommentLinks(CommentDto comment)
+    {
+        comment.Links = new Dictionary<string, LinkDto>
+        {
+            ["self"] = new()
+            {
+                Href = $"/api/comments/{comment.Id}",
+                Method = "GET"
+            },
+
+            ["song"] = new()
+            {
+                Href = $"/api/songs/{comment.SongId}",
+                Method = "GET"
+            }
+        };
     }
 }

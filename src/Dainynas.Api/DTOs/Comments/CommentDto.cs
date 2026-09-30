@@ -1,3 +1,5 @@
+using Dainynas.Api.DTOs.Common;
+
 namespace Dainynas.Api.DTOs.Comments;
 
 public class CommentDto
@@ -9,4 +11,6 @@ public class CommentDto
     public DateTime CreatedAt { get; set; }
 
     public int SongId { get; set; }
+
+    public Dictionary<string, LinkDto> Links { get; set; } = [];
 }
