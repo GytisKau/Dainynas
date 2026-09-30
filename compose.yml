@@ -25,6 +25,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=dainynas;Username=dainynas;Password=dainynas
+      UseKeyVault: "false"
+      Jwt__Key: "local-docker-jwt-key-which-should-be-long-enough-for-testing"
+      Admin__Email: "admin@dainynas.lt"
+      Admin__Password: "LabaiSlaptasAdmin123!"
     ports:
       - "8080:8080"
     depends_on:

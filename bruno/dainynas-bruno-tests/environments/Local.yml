@@ -1,15 +1,14 @@
 name: Local
 variables:
   - name: baseUrl
-    value: http://localhost:5272
+    value: http://localhost:8080
+    description: ""
   - name: adminEmail
     value: admin@dainynas.lt
+    description: ""
   - secret: true
     name: testPassword
-    description: ""
   - secret: true
     name: adminToken
-    description: ""
   - secret: true
     name: adminPassword
-    description: ""
