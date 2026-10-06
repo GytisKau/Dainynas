@@ -70,6 +70,8 @@ using (var scope = app.Services.CreateScope())
 
     dbContext.Database.Migrate();
 
+    await DatabaseSeeder.SeedAsync(dbContext);
+
     await AdminSeeder.SeedAsync(
         scope.ServiceProvider,
         builder.Configuration
