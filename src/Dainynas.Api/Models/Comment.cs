@@ -10,4 +10,7 @@ public class Comment
 
     public int SongId { get; set; }
     public Song Song { get; set; } = null!;
+
+    public int? UserId { get; set; }
+    public User? User { get; set; }
 }

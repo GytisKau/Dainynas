@@ -40,7 +40,7 @@ public class AuthController(
         {
             Email = normalizedEmail,
             PasswordHash = string.Empty,
-            Role = "User"
+            Role = UserRoles.User
         };
 
         user.PasswordHash = _passwordHasher.HashPassword(

@@ -11,6 +11,7 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
     public DbSet<Album> Albums => Set<Album>();
     public DbSet<AlbumSong> AlbumSongs => Set<AlbumSong>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,22 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
             .HasOne(comment => comment.Song)
             .WithMany(song => song.Comments)
             .HasForeignKey(comment => comment.SongId);
+
+        modelBuilder.Entity<Comment>()
+            .HasOne(comment => comment.User)
+            .WithMany(user => user.Comments)
+            .HasForeignKey(comment => comment.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<RefreshSession>()
+            .HasIndex(session => session.TokenHash)
+            .IsUnique();
+
+        modelBuilder.Entity<RefreshSession>()
+            .HasOne(session => session.User)
+            .WithMany(user => user.RefreshSessions)
+            .HasForeignKey(session => session.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         base.OnModelCreating(modelBuilder);
     }

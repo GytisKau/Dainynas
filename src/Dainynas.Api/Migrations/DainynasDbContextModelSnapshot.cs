@@ -84,9 +84,14 @@ namespace Dainynas.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SongId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Comments");
                 });
@@ -115,6 +120,38 @@ namespace Dainynas.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Performers");
+                });
+
+            modelBuilder.Entity("Dainynas.Api.Models.RefreshSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshSessions");
                 });
 
             modelBuilder.Entity("Dainynas.Api.Models.Song", b =>
@@ -212,7 +249,25 @@ namespace Dainynas.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Dainynas.Api.Models.User", "User")
+                        .WithMany("Comments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Song");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Dainynas.Api.Models.RefreshSession", b =>
+                {
+                    b.HasOne("Dainynas.Api.Models.User", "User")
+                        .WithMany("RefreshSessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Dainynas.Api.Models.Song", b =>
@@ -241,6 +296,13 @@ namespace Dainynas.Api.Migrations
                     b.Navigation("AlbumSongs");
 
                     b.Navigation("Comments");
+                });
+
+            modelBuilder.Entity("Dainynas.Api.Models.User", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("RefreshSessions");
                 });
 #pragma warning restore 612, 618
         }

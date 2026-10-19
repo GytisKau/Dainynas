@@ -40,7 +40,7 @@ public static class AdminSeeder
         {
             Email = normalizedEmail,
             PasswordHash = string.Empty,
-            Role = "Admin"
+            Role = UserRoles.Admin
         };
 
         admin.PasswordHash =
