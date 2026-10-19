@@ -1,0 +1,35 @@
+
+info:
+  name: Moderator login
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/Auth/login"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{moderatorEmail}}",
+        "password": "{{moderatorPassword}}"
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 200 && res.body?.token) {
+          bru.setVar("moderatorToken", res.body.token);
+        }
+
+    - type: tests
+      code: |-
+        test("Moderator login -> 200", function () {
+          expect(res.status).to.equal(200);
+        });
+
+        test("Moderator turi teisingą rolę", function () {
+          expect(res.body.role).to.equal("Moderator");
+          expect(res.body.token).to.be.a("string").and.not.empty;
+        });

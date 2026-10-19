@@ -76,6 +76,11 @@ using (var scope = app.Services.CreateScope())
         scope.ServiceProvider,
         builder.Configuration
     );
+
+    await ModeratorSeeder.SeedAsync(
+        scope.ServiceProvider,
+        builder.Configuration
+    );
 }
 
 if (app.Environment.IsDevelopment())
