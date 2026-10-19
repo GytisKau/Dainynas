@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Dainynas.Api.Services;
 
 namespace Dainynas.Api.Controllers;
 
@@ -17,11 +18,11 @@ namespace Dainynas.Api.Controllers;
 public class AuthController(
     DainynasDbContext context,
     IPasswordHasher<User> passwordHasher,
-    IConfiguration configuration) : ControllerBase
+    TokenService tokenService) : ControllerBase
 {
     private readonly DainynasDbContext _context = context;
     private readonly IPasswordHasher<User> _passwordHasher = passwordHasher;
-    private readonly IConfiguration _configuration = configuration;
+    private readonly TokenService _tokenService = tokenService;
 
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status201Created)]
@@ -51,7 +52,7 @@ public class AuthController(
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var response = CreateToken(user);
+        var response = await _tokenService.CreateTokenPairAsync(user);
 
         return StatusCode(
             StatusCodes.Status201Created,
@@ -87,56 +88,17 @@ public class AuthController(
             });
         }
 
-        return Ok(CreateToken(user));
-    }
-
-    private AuthResponseDto CreateToken(User user)
-    {
-        var jwtKey = _configuration["Jwt:Key"]
-            ?? throw new InvalidOperationException("JWT key is missing.");
-
-        var expiresAt = DateTime.UtcNow.AddHours(1);
-
-        var claims = new[]
+        if (verificationResult ==
+            PasswordVerificationResult.SuccessRehashNeeded)
         {
-            new Claim(
-                ClaimTypes.NameIdentifier,
-                user.Id.ToString()
-            ),
-            new Claim(
-                ClaimTypes.Email,
-                user.Email
-            ),
-            new Claim(
-                ClaimTypes.Role,
-                user.Role
-            )
-        };
+            user.PasswordHash = _passwordHasher.HashPassword(
+                user,
+                dto.Password);
 
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtKey)
-        );
+            await _context.SaveChangesAsync();
+        }
 
-        var credentials = new SigningCredentials(
-            key,
-            SecurityAlgorithms.HmacSha256
-        );
-
-        var token = new JwtSecurityToken(
-            claims: claims,
-            expires: expiresAt,
-            signingCredentials: credentials
-        );
-
-        return new AuthResponseDto
-        {
-            Token = new JwtSecurityTokenHandler()
-                .WriteToken(token),
-
-            ExpiresAt = expiresAt,
-
-            Role = user.Role
-        };
+        return Ok(await _tokenService.CreateTokenPairAsync(user));
     }
 
     [Authorize]
@@ -160,4 +122,47 @@ public class AuthController(
             message = "Admin access granted."
         });
     }
+
+
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AuthResponseDto>> Refresh(
+        RefreshTokenDto dto)
+    {
+        var response = await _tokenService.RefreshAsync(dto.RefreshToken);
+
+        if (response is null)
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid or expired refresh token."
+            });
+        }
+
+        return Ok(response);
+    }
+
+
+    [Authorize]
+    [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Logout()
+    {
+        var sessionClaim = User.FindFirstValue("session_id");
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(sessionClaim, out var sessionId) ||
+            !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        await _tokenService.RevokeSessionAsync(sessionId, userId);
+
+        return NoContent();
+    }
+
 }

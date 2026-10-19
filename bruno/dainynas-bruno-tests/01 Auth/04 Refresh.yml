@@ -1,0 +1,38 @@
+info:
+  name: Refresh
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/refresh"
+  body:
+    type: json
+    data: |-
+      {
+        "refreshToken": "{{refreshToken}}"
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 200) {
+            bru.setVar("accessToken", res.body.token);
+            bru.setVar("refreshToken", res.body.refreshToken);
+        }
+    - type: tests
+      code: |-
+        test("Refresh returns new token pair", function () {
+            expect(res.status).to.equal(200);
+            expect(res.body.token).to.be.a("string");
+            expect(res.body.refreshToken).to.be.a("string");
+            expect(res.body.role).to.equal("User");
+        });
+
+settings:
+  encodeUrl: false
+  timeout: 5000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

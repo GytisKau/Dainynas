@@ -32,6 +32,8 @@ services:
       Admin__Password: "LabaiSlaptasAdmin123!"
       Moderator__Email: ${MODERATOR_EMAIL:?Moderator email is required}
       Moderator__Password: ${MODERATOR_PASSWORD:?Moderator password is required}
+      Jwt__Issuer: "Dainynas.Api"
+      Jwt__Audience: "Dainynas.Client"
     ports:
       - "8080:8080"
     depends_on:

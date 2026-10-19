@@ -3,9 +3,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-
+using System.Security.Claims;
 using Azure.Identity;
 using Dainynas.Api.Data;
+using Dainynas.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,12 +27,22 @@ if (useKeyVault)
     );
 }
 
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("JWT key is missing.");
-
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<TokenService>();
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException(
+        "JWT key is missing.");
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException(
+        "JWT issuer is missing.");
+
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException(
+        "JWT audience is missing.");
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -44,11 +55,67 @@ builder.Services
                 Encoding.UTF8.GetBytes(jwtKey)
             ),
 
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
 
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+
+            NameClaimType = ClaimTypes.Email,
+            RoleClaimType = ClaimTypes.Role
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var sessionClaim =
+                    context.Principal?.FindFirst("session_id")?.Value;
+
+                var userIdClaim =
+                    context.Principal?.FindFirst(
+                        ClaimTypes.NameIdentifier)?.Value;
+
+                if (!Guid.TryParse(sessionClaim, out var sessionId) ||
+                    !int.TryParse(userIdClaim, out var userId))
+                {
+                    context.Fail("Invalid session claims.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices
+                    .GetRequiredService<DainynasDbContext>();
+
+                var now = DateTime.UtcNow;
+
+                var sessionIsActive =
+                    await db.RefreshSessions.AnyAsync(s =>
+                        s.Id == sessionId &&
+                        s.UserId == userId &&
+                        s.RevokedAt == null &&
+                        s.ExpiresAt > now);
+
+                if (!sessionIsActive)
+                {
+                    context.Fail("Session has expired or was revoked.");
+                    return;
+                }
+
+                // Ensure current privileges have not changed.
+                var tokenRole = context.Principal?
+                    .FindFirst(ClaimTypes.Role)?.Value;
+
+                var roleIsCurrent = await db.Users.AnyAsync(u =>
+                    u.Id == userId &&
+                    u.Role == tokenRole);
+
+                if (!roleIsCurrent)
+                {
+                    context.Fail("User role has changed.");
+                }
+            }
         };
     });
 

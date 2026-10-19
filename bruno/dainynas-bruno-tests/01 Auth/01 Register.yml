@@ -24,6 +24,8 @@ runtime:
       code: |-
         if (res.status === 201 && res.body?.token) {
           bru.setVar("token", res.body.token);
+          bru.setVar("accessToken", res.body.token);
+          bru.setVar("refreshToken", res.body.refreshToken);
         }
     - type: tests
       code: |-

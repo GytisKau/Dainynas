@@ -19,6 +19,8 @@ runtime:
     - type: after-response
       code: |-
         if (res.status === 200 && res.body?.token) {
+          bru.setVar("accessToken", res.body.token);
+          bru.setVar("refreshToken", res.body.refreshToken);
           bru.setVar("token", res.body.token);
         }
     - type: tests
