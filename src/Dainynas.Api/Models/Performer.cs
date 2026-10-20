@@ -10,4 +10,9 @@ public class Performer
     public string? PhotoUrl { get; set; }
 
     public ICollection<Song> Songs { get; set; } = [];
+
+    public int? OwnerId { get; set; }
+    public User? Owner { get; set; }
+
+    public string PublicationStatus { get; set; } = Models.PublicationStatus.Draft;
 }

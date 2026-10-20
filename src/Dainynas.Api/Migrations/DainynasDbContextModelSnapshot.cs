@@ -36,11 +36,20 @@ namespace Dainynas.Api.Migrations
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("OwnerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PublicationStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Albums");
                 });
@@ -96,6 +105,60 @@ namespace Dainynas.Api.Migrations
                     b.ToTable("Comments");
                 });
 
+            modelBuilder.Entity("Dainynas.Api.Models.ModerationRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProposedDataJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SubmittedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("EntityType", "EntityId")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'Pending'");
+
+                    b.ToTable("ModerationRequests");
+                });
+
             modelBuilder.Entity("Dainynas.Api.Models.Performer", b =>
                 {
                     b.Property<int>("Id")
@@ -111,13 +174,22 @@ namespace Dainynas.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("OwnerId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("PhotoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PublicationStatus")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Residence")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Performers");
                 });
@@ -174,8 +246,15 @@ namespace Dainynas.Api.Migrations
                     b.Property<string>("Lyrics")
                         .HasColumnType("text");
 
+                    b.Property<int?>("OwnerId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("PerformerId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("PublicationStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("RecordingPlace")
                         .HasColumnType("text");
@@ -188,6 +267,8 @@ namespace Dainynas.Api.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.HasIndex("PerformerId");
 
@@ -220,6 +301,16 @@ namespace Dainynas.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Dainynas.Api.Models.Album", b =>
+                {
+                    b.HasOne("Dainynas.Api.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Dainynas.Api.Models.AlbumSong", b =>
@@ -259,6 +350,34 @@ namespace Dainynas.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Dainynas.Api.Models.ModerationRequest", b =>
+                {
+                    b.HasOne("Dainynas.Api.Models.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Dainynas.Api.Models.User", "SubmittedByUser")
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .IsRequired();
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("SubmittedByUser");
+                });
+
+            modelBuilder.Entity("Dainynas.Api.Models.Performer", b =>
+                {
+                    b.HasOne("Dainynas.Api.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("Dainynas.Api.Models.RefreshSession", b =>
                 {
                     b.HasOne("Dainynas.Api.Models.User", "User")
@@ -272,11 +391,18 @@ namespace Dainynas.Api.Migrations
 
             modelBuilder.Entity("Dainynas.Api.Models.Song", b =>
                 {
+                    b.HasOne("Dainynas.Api.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Dainynas.Api.Models.Performer", "Performer")
                         .WithMany("Songs")
                         .HasForeignKey("PerformerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Owner");
 
                     b.Navigation("Performer");
                 });

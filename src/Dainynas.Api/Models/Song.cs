@@ -18,4 +18,9 @@ public class Song
     public ICollection<AlbumSong> AlbumSongs { get; set; } = [];
     
     public ICollection<Comment> Comments { get; set; } = [];
+
+    public int? OwnerId { get; set; }
+    public User? Owner { get; set; }
+
+    public string PublicationStatus { get; set; } = Models.PublicationStatus.Draft;
 }

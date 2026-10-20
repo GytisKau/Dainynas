@@ -12,6 +12,7 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
     public DbSet<AlbumSong> AlbumSongs => Set<AlbumSong>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+    public DbSet<ModerationRequest> ModerationRequests => Set<ModerationRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +57,50 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
             .WithMany(user => user.RefreshSessions)
             .HasForeignKey(session => session.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Performer>()
+            .HasOne(p => p.Owner)
+            .WithMany()
+            .HasForeignKey(p => p.OwnerId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Song>()
+            .HasOne(s => s.Owner)
+            .WithMany()
+            .HasForeignKey(s => s.OwnerId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Album>()
+            .HasOne(a => a.Owner)
+            .WithMany()
+            .HasForeignKey(a => a.OwnerId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ModerationRequest>()
+            .HasOne(r => r.SubmittedByUser)
+            .WithMany()
+            .HasForeignKey(r => r.SubmittedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ModerationRequest>()
+            .HasOne(r => r.ReviewedByUser)
+            .WithMany()
+            .HasForeignKey(r => r.ReviewedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ModerationRequest>()
+            .Property(r => r.ProposedDataJson)
+            .HasColumnType("jsonb");
+
+        modelBuilder.Entity<ModerationRequest>()
+            .HasIndex(r => new
+            {
+                r.EntityType,
+                r.EntityId
+            })
+            .IsUnique()
+            .HasFilter("\"Status\" = 'Pending'");
+
 
         base.OnModelCreating(modelBuilder);
     }

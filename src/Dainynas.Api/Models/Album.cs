@@ -9,4 +9,9 @@ public class Album
     public bool IsPublic { get; set; }
     
     public ICollection<AlbumSong> AlbumSongs { get; set; } = [];
+
+    public int? OwnerId { get; set; }
+    public User? Owner { get; set; }
+
+    public string PublicationStatus { get; set; } = Models.PublicationStatus.Draft;
 }
