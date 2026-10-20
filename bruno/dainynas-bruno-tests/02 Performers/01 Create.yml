@@ -15,9 +15,7 @@ http:
         "residence": "Vilnius",
         "photoUrl": "https://example.com/performer.jpg"
       }
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:

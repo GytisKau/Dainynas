@@ -24,9 +24,7 @@ http:
         "isPublic": true,
         "performerId": "{{performerId}}"
       }
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:

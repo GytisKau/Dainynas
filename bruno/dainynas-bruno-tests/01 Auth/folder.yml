@@ -2,3 +2,6 @@ info:
   name: 01 Auth
   type: folder
   seq: 1
+
+request:
+  auth: inherit

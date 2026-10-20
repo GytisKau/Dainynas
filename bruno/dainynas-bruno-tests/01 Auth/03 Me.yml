@@ -6,9 +6,7 @@ info:
 http:
   method: GET
   url: "{{baseUrl}}/api/Auth/me"
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:

@@ -6,9 +6,7 @@ info:
 http:
   method: POST
   url: "{{baseUrl}}/api/auth/logout"
-  auth:
-    type: bearer
-    token: "{{accessToken}}"
+  auth: inherit
 
 runtime:
   scripts:

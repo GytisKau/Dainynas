@@ -6,12 +6,7 @@ info:
 http:
   method: DELETE
   url: "{{baseUrl}}/api/Songs/{{songId}}"
-  headers:
-    - name: Accept
-      value: application/json
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:

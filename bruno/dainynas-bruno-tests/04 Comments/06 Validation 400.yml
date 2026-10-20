@@ -19,9 +19,7 @@ http:
         "authorName": "Bruno Tester",
         "songId": 0
       }
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:

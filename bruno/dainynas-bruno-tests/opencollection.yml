@@ -2,27 +2,23 @@ opencollection: 1.0.0
 
 info:
   name: Dainynas API Tests
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
 
 request:
-  variables:
-    - name: token
-      value: ""
-      disabled: true
-    - name: performerId
-      value: ""
-      disabled: true
-    - name: songId
-      value: ""
-      disabled: true
-    - name: commentId
-      value: ""
-      disabled: true
-    - name: albumId
-      value: ""
-      disabled: true
-
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
 bundled: false
-
 extensions:
   bruno:
     ignore:

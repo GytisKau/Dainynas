@@ -6,9 +6,6 @@ info:
 http:
   method: GET
   url: "{{baseUrl}}/api/Albums/{{albumId}}"
-  headers:
-    - name: Accept
-      value: application/json
 
 runtime:
   scripts:

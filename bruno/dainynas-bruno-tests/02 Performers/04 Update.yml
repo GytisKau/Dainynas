@@ -20,9 +20,7 @@ http:
         "residence": "Kaunas",
         "photoUrl": "https://example.com/performer-updated.jpg"
       }
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:
@@ -40,3 +38,4 @@ settings:
   timeout: 5000
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true

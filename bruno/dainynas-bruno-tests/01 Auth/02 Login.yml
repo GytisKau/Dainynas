@@ -18,10 +18,9 @@ runtime:
   scripts:
     - type: after-response
       code: |-
-        if (res.status === 200 && res.body?.token) {
+        if (res.status === 200) {
           bru.setVar("accessToken", res.body.token);
           bru.setVar("refreshToken", res.body.refreshToken);
-          bru.setVar("token", res.body.token);
         }
     - type: tests
       code: |-
@@ -30,7 +29,9 @@ runtime:
         });
         test("tokenas atnaujinamas runtime kintamajame", function () {
           expect(res.body.token).to.be.a("string").and.not.empty;
-          expect(bru.getVar("token")).to.equal(res.body.token);
+          expect(res.body.refreshToken).to.be.a("string").and.not.empty;
+          expect(bru.getVar("accessToken")).to.equal(res.body.token);
+          expect(bru.getVar("refreshToken")).to.equal(res.body.refreshToken);
         });
 
 settings:

@@ -6,9 +6,6 @@ info:
 http:
   method: GET
   url: "{{baseUrl}}/api/Comments/{{commentId}}"
-  headers:
-    - name: Accept
-      value: application/json
 
 runtime:
   scripts:

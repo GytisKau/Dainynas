@@ -4,6 +4,8 @@ using Dainynas.Api.DTOs.Common;
 using Dainynas.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Dainynas.Api.Controllers;
 
@@ -95,6 +97,7 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         return Ok(comment);
     }
 
+    [Authorize]
     [HttpPost]
     [ProducesResponseType(typeof(CommentDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -111,12 +114,20 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
             });
         }
 
+        var userId = GetCurrentUserId();
+
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         var comment = new Comment
         {
             Text = dto.Text,
             AuthorName = dto.AuthorName,
             CreatedAt = DateTime.UtcNow,
-            SongId = dto.SongId
+            SongId = dto.SongId,
+            UserId = userId.Value
         };
 
         _context.Comments.Add(comment);
@@ -140,9 +151,12 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         );
     }
 
+    [Authorize]
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         int id,
@@ -153,6 +167,25 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         if (comment is null)
         {
             return NotFound();
+        }
+
+        var userId = GetCurrentUserId();
+
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var isOwner =
+            comment.UserId.HasValue &&
+            comment.UserId.Value == userId.Value;
+
+        var isModerator = User.IsInRole(UserRoles.Moderator);
+        var isAdmin = User.IsInRole(UserRoles.Admin);
+
+        if (!isOwner && !isModerator && !isAdmin)
+        {
+            return Forbid();
         }
 
         var songExists = await _context.Songs
@@ -175,8 +208,11 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         return NoContent();
     }
 
+    [Authorize]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
@@ -185,6 +221,25 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         if (comment is null)
         {
             return NotFound();
+        }
+
+        var userId = GetCurrentUserId();
+
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var isOwner =
+            comment.UserId.HasValue &&
+            comment.UserId.Value == userId.Value;
+
+        var isModerator = User.IsInRole(UserRoles.Moderator);
+        var isAdmin = User.IsInRole(UserRoles.Admin);
+
+        if (!isOwner && !isModerator && !isAdmin)
+        {
+            return Forbid();
         }
 
         _context.Comments.Remove(comment);
@@ -221,5 +276,12 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
                 Method = "DELETE"
             }
         };
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        return int.TryParse(claim, out var userId) ? userId : null;
     }
 }

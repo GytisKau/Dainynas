@@ -2,3 +2,6 @@ info:
   name: 03 Songs
   type: folder
   seq: 3
+
+request:
+  auth: inherit

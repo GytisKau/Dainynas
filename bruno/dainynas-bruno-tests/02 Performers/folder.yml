@@ -2,3 +2,6 @@ info:
   name: 02 Performers
   type: folder
   seq: 2
+
+request:
+  auth: inherit

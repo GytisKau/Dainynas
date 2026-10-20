@@ -5,6 +5,7 @@ using Dainynas.Api.DTOs.Performers;
 using Dainynas.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Dainynas.Api.Controllers;
 
@@ -90,6 +91,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         return Ok(performer);
     }
 
+    [Authorize(Roles = UserRoles.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(PerformerDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -124,6 +126,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             result);
     }
 
+    [Authorize(Roles = UserRoles.Admin)]
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -149,6 +152,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = UserRoles.Admin)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

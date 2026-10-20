@@ -4,6 +4,7 @@ using Dainynas.Api.DTOs.Common;
 using Dainynas.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Dainynas.Api.Controllers;
 
@@ -88,6 +89,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         return Ok(album);
     }
 
+    [Authorize]
     [HttpPost]
     [ProducesResponseType(typeof(AlbumDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -175,6 +177,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             result);
     }
 
+    [Authorize(Roles = UserRoles.Moderator + "," + UserRoles.Admin)]
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -248,6 +251,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = UserRoles.Moderator + "," + UserRoles.Admin)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

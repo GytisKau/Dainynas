@@ -4,6 +4,7 @@ using Dainynas.Api.DTOs.Common;
 using Dainynas.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Dainynas.Api.Controllers;
 
@@ -106,6 +107,7 @@ public class SongsController(DainynasDbContext context) : ControllerBase
         return Ok(song);
     }
 
+    [Authorize]
     [HttpPost]
     [ProducesResponseType(typeof(SongDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -159,6 +161,7 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             result);
     }
 
+    [Authorize(Roles = UserRoles.Moderator + "," + UserRoles.Admin)]
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -199,6 +202,7 @@ public class SongsController(DainynasDbContext context) : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = UserRoles.Moderator + "," + UserRoles.Admin)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

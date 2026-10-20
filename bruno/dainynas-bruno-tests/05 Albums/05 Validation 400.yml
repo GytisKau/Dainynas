@@ -20,9 +20,7 @@ http:
         "isPublic": false,
         "songIds": []
       }
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:

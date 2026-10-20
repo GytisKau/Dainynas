@@ -22,8 +22,7 @@ runtime:
         bru.setVar("testEmail", `bruno.${unique}@example.test`);
     - type: after-response
       code: |-
-        if (res.status === 201 && res.body?.token) {
-          bru.setVar("token", res.body.token);
+        if (res.status === 201) {
           bru.setVar("accessToken", res.body.token);
           bru.setVar("refreshToken", res.body.refreshToken);
         }
@@ -34,7 +33,9 @@ runtime:
         });
         test("grąžinamas JWT ir rolė", function () {
           expect(res.body).to.have.property("token").that.is.a("string").and.not.empty;
+          expect(res.body).to.have.property("refreshToken").that.is.a("string").and.not.empty;
           expect(res.body).to.have.property("expiresAt").that.is.a("string");
+          expect(res.body).to.have.property("refreshExpiresAt").that.is.a("string");
           expect(res.body).to.have.property("role").that.is.a("string");
         });
 

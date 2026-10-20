@@ -10,9 +10,6 @@ variables:
     name: testPassword
     description: ""
   - secret: true
-    name: adminToken
-    description: ""
-  - secret: true
     name: adminPassword
     description: ""
   - secret: true

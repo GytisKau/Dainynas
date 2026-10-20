@@ -9,9 +9,7 @@ http:
   headers:
     - name: Accept
       value: application/json
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:

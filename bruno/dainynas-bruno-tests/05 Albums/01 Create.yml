@@ -22,9 +22,7 @@ http:
           "{{songId}}"
         ]
       }
-  auth:
-    type: bearer
-    token: "{{token}}"
+  auth: inherit
 
 runtime:
   scripts:
