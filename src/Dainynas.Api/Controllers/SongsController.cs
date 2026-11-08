@@ -14,17 +14,12 @@ namespace Dainynas.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SongsController : ControllerBase
+public class SongsController(DainynasDbContext context) : ControllerBase
 {
-    private readonly DainynasDbContext _context;
+    private readonly DainynasDbContext _context = context;
 
     private static readonly JsonSerializerOptions ProposalOptions =
         new(JsonSerializerDefaults.Web);
-
-    public SongsController(DainynasDbContext context)
-    {
-        _context = context;
-    }
 
     // --------------------------------------------------
     // Helpers

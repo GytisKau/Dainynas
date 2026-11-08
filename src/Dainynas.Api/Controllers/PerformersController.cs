@@ -16,17 +16,12 @@ namespace Dainynas.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PerformersController : ControllerBase
+public class PerformersController(DainynasDbContext context) : ControllerBase
 {
-    private readonly DainynasDbContext _context;
+    private readonly DainynasDbContext _context = context;
 
     private static readonly JsonSerializerOptions ProposalOptions =
         new(JsonSerializerDefaults.Web);
-
-    public PerformersController(DainynasDbContext context)
-    {
-        _context = context;
-    }
 
     private int? CurrentUserId()
     {
