@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
+using Dainynas.Api.Extensions;
+using Dainynas.Api.Helpers;
+
 namespace Dainynas.Api.Controllers;
 
 [ApiController]
@@ -23,46 +26,21 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
 
     // ---------------- Helpers ----------------
 
-    private int? CurrentUserId() =>
-        int.TryParse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier),
-            out var id)
-                ? id
-                : null;
-
-    private bool IsModeratorOrAdmin() =>
-        User.IsInRole(UserRoles.Moderator) ||
-        User.IsInRole(UserRoles.Admin);
-
-    private bool CanManage(Album album)
-    {
-        var userId = CurrentUserId();
-
-        return IsModeratorOrAdmin() ||
-            (userId.HasValue &&
-             album.OwnerId == userId.Value);
-    }
-
     private static bool IsSongPublic(Song song) =>
         song.PublicationStatus == PublicationStatus.Published &&
         song.IsPublic &&
         song.Performer.PublicationStatus == PublicationStatus.Published;
 
     private bool CanRead(Album album) =>
-        CanManage(album) ||
+        User.CanManage(album.OwnerId) ||
         (album.PublicationStatus == PublicationStatus.Published &&
          album.IsPublic &&
          album.AlbumSongs.All(x => IsSongPublic(x.Song)));
 
     private bool CanUseSong(Song song, int userId) =>
-        IsModeratorOrAdmin() ||
+        User.IsModeratorOrAdmin() ||
         song.OwnerId == userId ||
         IsSongPublic(song);
-
-    private static bool ValidPagination(int page, int pageSize) =>
-        page >= 1 &&
-        pageSize is >= 1 and <= 100 &&
-        (long)(page - 1) * pageSize <= int.MaxValue;
 
     private IQueryable<Album> AlbumsWithSongs() =>
         _context.Albums
@@ -84,7 +62,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
 
     private AlbumDto ToDto(Album album)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
 
         var dto = new AlbumDto
         {
@@ -98,7 +76,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         foreach (var entry in album.AlbumSongs.OrderBy(x => x.Position))
         {
             // Do not expose another user's private song.
-            if (!IsModeratorOrAdmin() &&
+            if (!User.IsModeratorOrAdmin() &&
                 !IsSongPublic(entry.Song) &&
                 (!userId.HasValue ||
                  entry.Song.OwnerId != userId.Value))
@@ -126,7 +104,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             Href = $"/api/albums/{album.Id}"
         };
 
-        if (CanManage(album))
+        if (User.CanManage(album.OwnerId))
         {
             if (album.PublicationStatus != PublicationStatus.Pending)
             {
@@ -243,35 +221,26 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         int page = 1,
         int pageSize = 10)
     {
-        if (!ValidPagination(page, pageSize))
+        if (!PaginationHelper.IsValid(page, pageSize))
             return BadRequest(new { message = "Invalid pagination." });
 
         var query = PublicAlbumsQuery();
 
         if (!string.IsNullOrWhiteSpace(title))
-        {
-            var search = title.Trim().ToLower();
-
             query = query.Where(a =>
-                a.Title.ToLower().Contains(search));
-        }
+                a.Title.Contains(title.Trim(), StringComparison.CurrentCultureIgnoreCase));
 
-        var total = await query.CountAsync();
-
-        var albums = await query
-            .OrderBy(a => a.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var result = await PaginationHelper.PaginateAsync(
+            query.OrderBy(a => a.Id),
+            page, pageSize);
 
         return Ok(new PagedResponse<AlbumDto>
         {
-            Items = albums.Select(ToDto).ToList(),
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = total,
-            TotalPages = (int)Math.Ceiling(
-                total / (double)pageSize)
+            Items = [.. result.Items.Select(ToDto)],
+            Page = result.Page,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
         });
     }
 
@@ -287,31 +256,27 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         int page = 1,
         int pageSize = 10)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
-        if (!ValidPagination(page, pageSize))
+        if (!PaginationHelper.IsValid(page, pageSize))
             return BadRequest(new { message = "Invalid pagination." });
 
         var query = AlbumsWithSongs()
             .Where(a => a.OwnerId == userId.Value);
 
-        var total = await query.CountAsync();
-
-        var albums = await query
-            .OrderByDescending(a => a.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
+        var result = await PaginationHelper.PaginateAsync(
+            query.OrderByDescending(a => a.Id),
+            page,
+            pageSize);
+            
         return Ok(new PagedResponse<AlbumDto>
         {
-            Items = albums.Select(ToDto).ToList(),
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = total,
-            TotalPages = (int)Math.Ceiling(
-                total / (double)pageSize)
+            Items = result.Items.Select(ToDto).ToList(),
+            Page = result.Page,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
         });
     }
 
@@ -345,7 +310,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
     public async Task<ActionResult<AlbumDto>> Create(
         CreateAlbumDto dto)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
         if (string.IsNullOrWhiteSpace(dto.Title))
@@ -402,7 +367,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         int id,
         UpdateAlbumDto dto)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
         if (string.IsNullOrWhiteSpace(dto.Title))
@@ -424,7 +389,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         if (album is null)
             return NotFound();
 
-        if (!CanManage(album))
+        if (!User.CanManage(album.OwnerId))
             return Forbid();
 
         if (album.PublicationStatus == PublicationStatus.Pending)
@@ -537,7 +502,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Submit(int id)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
         await using var transaction =
@@ -554,7 +519,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         if (album is null)
             return NotFound();
 
-        if (!CanManage(album))
+        if (!User.CanManage(album.OwnerId))
             return Forbid();
 
         if (album.PublicationStatus != PublicationStatus.Draft)
@@ -663,7 +628,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         if (album is null)
             return NotFound();
 
-        if (!CanManage(album))
+        if (!User.CanManage(album.OwnerId))
             return Forbid();
 
         if (album.PublicationStatus != PublicationStatus.Draft)

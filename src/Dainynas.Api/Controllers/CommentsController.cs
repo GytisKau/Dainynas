@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+using Dainynas.Api.Extensions;
+using Dainynas.Api.Helpers;
+
 namespace Dainynas.Api.Controllers;
 
 [ApiController]
@@ -18,34 +21,12 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
 
     // ---------------- Helpers ----------------
 
-    private int? CurrentUserId()
-    {
-        return int.TryParse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier),
-            out var id)
-                ? id
-                : null;
-    }
-
-    private bool IsModeratorOrAdmin() =>
-        User.IsInRole(UserRoles.Moderator) ||
-        User.IsInRole(UserRoles.Admin);
-
-    private bool CanManage(Comment comment)
-    {
-        var userId = CurrentUserId();
-
-        return IsModeratorOrAdmin() ||
-            (userId.HasValue &&
-             comment.UserId == userId.Value);
-    }
-
     private bool CanReadSong(Song song)
     {
-        if (IsModeratorOrAdmin())
+        if (User.IsModeratorOrAdmin())
             return true;
 
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
 
         if (userId.HasValue &&
             song.OwnerId == userId.Value)
@@ -60,24 +41,15 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
                    PublicationStatus.Published;
     }
 
-    private static bool ValidPagination(
-        int page,
-        int pageSize)
-    {
-        return page >= 1 &&
-               pageSize is >= 1 and <= 100 &&
-               (long)(page - 1) * pageSize <= int.MaxValue;
-    }
-
     // Comments visible to the current caller.
     private IQueryable<Comment> VisibleCommentsQuery()
     {
         var query = _context.Comments.AsNoTracking();
 
-        if (IsModeratorOrAdmin())
+        if (User.IsModeratorOrAdmin())
             return query;
 
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
 
         if (userId.HasValue)
         {
@@ -121,7 +93,7 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
             Href = $"/api/songs/{comment.SongId}"
         };
 
-        if (CanManage(comment))
+        if (User.CanManage(comment.UserId))
         {
             dto.Links["update"] = new LinkDto
             {
@@ -153,13 +125,8 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         int page = 1,
         int pageSize = 10)
     {
-        if (!ValidPagination(page, pageSize))
-        {
-            return BadRequest(new
-            {
-                message = "Invalid pagination parameters."
-            });
-        }
+        if (!PaginationHelper.IsValid(page, pageSize))
+            return BadRequest(new { message = "Invalid pagination." });
 
         if (songId.HasValue && songId.Value < 1)
         {
@@ -173,44 +140,33 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(text))
         {
-            var search = text.Trim().ToLower();
-
             query = query.Where(c =>
-                c.Text.ToLower().Contains(search));
+                c.Text.Contains(text.Trim(), StringComparison.CurrentCultureIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(authorName))
-        {
-            var search = authorName.Trim().ToLower();
-
             query = query.Where(c =>
                 c.AuthorName != null &&
-                c.AuthorName.ToLower().Contains(search));
-        }
+                c.AuthorName.Contains(authorName.Trim(), StringComparison.CurrentCultureIgnoreCase));
 
         if (songId.HasValue)
-        {
             query = query.Where(c =>
                 c.SongId == songId.Value);
-        }
 
-        var total = await query.CountAsync();
-
-        var comments = await query
-            .OrderByDescending(c => c.CreatedAt)
-            .ThenByDescending(c => c.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var result = await PaginationHelper.PaginateAsync(
+            query
+                .OrderByDescending(c => c.CreatedAt)
+                .ThenByDescending(c => c.Id),
+            page,
+            pageSize);
 
         return Ok(new PagedResponse<CommentDto>
         {
-            Items = comments.Select(ToDto).ToList(),
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = total,
-            TotalPages = (int)Math.Ceiling(
-                total / (double)pageSize)
+            Items = [.. result.Items.Select(ToDto)],
+            Page = result.Page,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
         });
     }
 
@@ -245,7 +201,7 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
     public async Task<ActionResult<CommentDto>> Create(
         CreateCommentDto dto)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
 
         if (userId is null)
             return Unauthorized();
@@ -313,7 +269,7 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         if (comment is null)
             return NotFound();
 
-        if (!CanManage(comment))
+        if (!User.CanManage(comment.UserId))
             return Forbid();
 
         // Prevent moving a comment to another song.
@@ -354,7 +310,7 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         if (comment is null)
             return NotFound();
 
-        if (!CanManage(comment))
+        if (!User.CanManage(comment.UserId))
             return Forbid();
 
         _context.Comments.Remove(comment);

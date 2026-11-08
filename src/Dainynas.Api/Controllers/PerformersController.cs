@@ -12,6 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
+using Dainynas.Api.Extensions;
+using Dainynas.Api.Helpers;
+
 namespace Dainynas.Api.Controllers;
 
 [ApiController]
@@ -23,35 +26,16 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
     private static readonly JsonSerializerOptions ProposalOptions =
         new(JsonSerializerDefaults.Web);
 
-    private int? CurrentUserId()
-    {
-        return int.TryParse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier),
-            out var id) ? id : null;
-    }
-
-    private bool IsModeratorOrAdmin() =>
-        User.IsInRole(UserRoles.Moderator) ||
-        User.IsInRole(UserRoles.Admin);
-
-    private bool CanManage(Performer performer)
-    {
-        var userId = CurrentUserId();
-
-        return IsModeratorOrAdmin() ||
-            (userId.HasValue &&
-             performer.OwnerId == userId.Value);
-    }
 
     private bool CanRead(Performer performer) =>
         performer.PublicationStatus == PublicationStatus.Published ||
-        CanManage(performer);
+        User.CanManage(performer.OwnerId);
 
     private bool CanReadSong(Song song)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
 
-        return IsModeratorOrAdmin() ||
+        return User.IsModeratorOrAdmin() ||
             (song.PublicationStatus == PublicationStatus.Published &&
              song.IsPublic) ||
             (userId.HasValue && song.OwnerId == userId.Value);
@@ -84,7 +68,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             Href = $"/api/performers/{performer.Id}/profile"
         };
 
-        if (CanManage(performer))
+        if (User.CanManage(performer.OwnerId))
         {
             if (performer.PublicationStatus != PublicationStatus.Pending)
             {
@@ -158,7 +142,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         int page = 1,
         int pageSize = 10)
     {
-        if (!ValidPagination(page, pageSize))
+        if (!PaginationHelper.IsValid(page, pageSize))
             return BadRequest(new { message = "Invalid pagination." });
 
         var query = _context.Performers
@@ -168,24 +152,21 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         if (!string.IsNullOrWhiteSpace(name))
         {
             query = query.Where(p =>
-                p.Name.ToLower().Contains(name.ToLower()));
+                EF.Functions.ILike(p.Name, $"%{name.Trim()}%"));
         }
 
-        var total = await query.CountAsync();
-
-        var performers = await query
-            .OrderBy(p => p.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var result = await PaginationHelper.PaginateAsync(
+            query.OrderBy(p => p.Id),
+            page,
+            pageSize);
 
         return Ok(new PagedResponse<PerformerDto>
         {
-            Items = performers.Select(ToDto).ToList(),
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = total,
-            TotalPages = (int)Math.Ceiling(total / (double)pageSize)
+            Items = [.. result.Items.Select(ToDto)],
+            Page = result.Page,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
         });
     }
 
@@ -196,31 +177,28 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         int page = 1,
         int pageSize = 10)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
-        if (!ValidPagination(page, pageSize))
+        if (!PaginationHelper.IsValid(page, pageSize))
             return BadRequest(new { message = "Invalid pagination." });
 
         var query = _context.Performers
             .AsNoTracking()
             .Where(p => p.OwnerId == userId.Value);
 
-        var total = await query.CountAsync();
-
-        var performers = await query
-            .OrderByDescending(p => p.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var result = await PaginationHelper.PaginateAsync(
+            query.OrderByDescending(p => p.Id),
+            page,
+            pageSize);
 
         return Ok(new PagedResponse<PerformerDto>
         {
-            Items = performers.Select(ToDto).ToList(),
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = total,
-            TotalPages = (int)Math.Ceiling(total / (double)pageSize)
+            Items = [.. result.Items.Select(ToDto)],
+            Page = result.Page,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
         });
     }
 
@@ -247,7 +225,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
     public async Task<ActionResult<PerformerDto>> Create(
         CreatePerformerDto dto)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -284,7 +262,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         int id,
         UpdatePerformerDto dto)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -306,16 +284,11 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         if (performer is null)
             return NotFound();
 
-        if (!CanManage(performer))
+        if (!User.CanManage(performer.OwnerId))
             return Forbid();
 
         if (performer.PublicationStatus == PublicationStatus.Pending)
-        {
-            return Conflict(new
-            {
-                message = "Performer is awaiting moderation."
-            });
-        }
+            return Conflict(new { message = "Performer is awaiting moderation." });
 
         if (performer.PublicationStatus == PublicationStatus.Draft)
         {
@@ -331,12 +304,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         }
 
         if (performer.PublicationStatus != PublicationStatus.Published)
-        {
-            return Conflict(new
-            {
-                message = "Unknown publication status."
-            });
-        }
+            return Conflict(new { message = "Unknown publication status." });
 
         var hasPending = await _context.ModerationRequests
             .AnyAsync(r =>
@@ -345,12 +313,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
                 r.Status == ModerationStatuses.Pending);
 
         if (hasPending)
-        {
-            return Conflict(new
-            {
-                message = "A moderation request already exists."
-            });
-        }
+            return Conflict(new { message = "A moderation request already exists." });
 
         var request = new ModerationRequest
         {
@@ -358,8 +321,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             EntityId = performer.Id,
             RequestType = ModerationRequestTypes.Update,
             Status = ModerationStatuses.Pending,
-            ProposedDataJson = JsonSerializer.Serialize(
-                dto, ProposalOptions),
+            ProposedDataJson = JsonSerializer.Serialize(dto, ProposalOptions),
             SubmittedByUserId = userId.Value,
             SubmittedAt = DateTime.UtcNow
         };
@@ -400,7 +362,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Submit(int id)
     {
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
         if (userId is null) return Unauthorized();
 
         await using var transaction =
@@ -417,16 +379,11 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         if (performer is null)
             return NotFound();
 
-        if (!CanManage(performer))
+        if (!User.CanManage(performer.OwnerId))
             return Forbid();
 
         if (performer.PublicationStatus != PublicationStatus.Draft)
-        {
-            return Conflict(new
-            {
-                message = "Only drafts can be submitted."
-            });
-        }
+            return Conflict(new { message = "Only drafts can be submitted." });
 
         var hasPending = await _context.ModerationRequests
             .AnyAsync(r =>
@@ -435,12 +392,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
                 r.Status == ModerationStatuses.Pending);
 
         if (hasPending)
-        {
-            return Conflict(new
-            {
-                message = "A moderation request already exists."
-            });
-        }
+            return Conflict(new { message = "A moderation request already exists." });
 
         performer.PublicationStatus = PublicationStatus.Pending;
 
@@ -505,7 +457,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         if (performer is null)
             return NotFound();
 
-        if (!CanManage(performer))
+        if (!User.CanManage(performer.OwnerId))
             return Forbid();
 
         if (performer.PublicationStatus != PublicationStatus.Draft)
@@ -613,7 +565,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         int page = 1,
         int pageSize = 10)
     {
-        if (!ValidPagination(page, pageSize))
+        if (!PaginationHelper.IsValid(page, pageSize))
             return BadRequest(new { message = "Invalid pagination." });
 
         var performer = await _context.Performers
@@ -628,15 +580,11 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         if (!string.IsNullOrWhiteSpace(title))
         {
             query = query.Where(s =>
-                s.Title.ToLower().Contains(title.ToLower()));
+                EF.Functions.ILike(s.Title, $"%{title.Trim()}%"));
         }
 
-        var total = await query.CountAsync();
-
-        var songs = await query
+        var projectedQuery = query
             .OrderBy(s => s.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .Select(s => new SongDto
             {
                 Id = s.Id,
@@ -650,21 +598,19 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
                 PublicationStatus = s.PublicationStatus,
                 PerformerId = s.PerformerId,
                 PerformerName = s.Performer.Name
-            })
-            .ToListAsync();
+            });
 
-        foreach (var song in songs)
+        var result = await PaginationHelper.PaginateAsync(
+            projectedQuery,
+            page,
+            pageSize);
+
+        foreach (var song in result.Items)
             AddSongLinks(song);
 
-        return Ok(new PagedResponse<SongDto>
-        {
-            Items = songs,
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = total,
-            TotalPages = (int)Math.Ceiling(total / (double)pageSize)
-        });
+        return Ok(result);
     }
+
 
     // GET /api/performers/{performerId}/songs/{songId}/comments
     [HttpGet("{performerId:int}/songs/{songId:int}/comments")]
@@ -714,21 +660,14 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             .AsNoTracking()
             .Where(s => s.PerformerId == performerId);
 
-        if (IsModeratorOrAdmin())
+        if (User.IsModeratorOrAdmin())
             return query;
 
-        var userId = CurrentUserId();
+        var userId = User.GetUserId();
 
         return query.Where(s =>
             (s.PublicationStatus == PublicationStatus.Published &&
              s.IsPublic) ||
             (userId.HasValue && s.OwnerId == userId.Value));
-    }
-
-    private static bool ValidPagination(int page, int pageSize)
-    {
-        return page >= 1 &&
-               pageSize is >= 1 and <= 100 &&
-               (long)(page - 1) * pageSize <= int.MaxValue;
     }
 }
