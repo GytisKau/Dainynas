@@ -652,6 +652,7 @@ public class PerformersController : ControllerBase
                 ExternalArchiveUrl = s.ExternalArchiveUrl,
                 AudioUrl = s.AudioUrl,
                 IsPublic = s.IsPublic,
+                PublicationStatus = s.PublicationStatus,
                 PerformerId = s.PerformerId,
                 PerformerName = s.Performer.Name
             })

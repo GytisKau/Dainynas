@@ -13,6 +13,7 @@ public class SongDto
     public string? ExternalArchiveUrl { get; set; }
     public string? AudioUrl { get; set; }
     public bool IsPublic { get; set; }
+    public string PublicationStatus { get; set; } = string.Empty;
 
     public int PerformerId { get; set; }
     public string PerformerName { get; set; } = string.Empty;

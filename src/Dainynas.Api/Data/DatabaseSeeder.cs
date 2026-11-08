@@ -78,6 +78,7 @@ public static class DatabaseSeeder
                 AudioUrl =
                     "https://irasai.archyvas.llti.lt/mp3/LTRF_pl_458/pl.458-01.mp3",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[0].Id
             },
 
@@ -93,6 +94,7 @@ public static class DatabaseSeeder
                 AudioUrl =
                     "https://etnomuzikologai.lmta.lt/files/audio/KF_4551_007.mp3",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[0].Id
             },
 
@@ -108,6 +110,7 @@ public static class DatabaseSeeder
                 AudioUrl =
                     "https://etnomuzikologai.lmta.lt/files/audio/KF_5016_009.mp3",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[0].Id
             },
 
@@ -119,6 +122,7 @@ public static class DatabaseSeeder
                 RecordingYear = 1968,
                 RecordingPlace = "Aukštadvaris, Trakų r.",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[1].Id
             },
 
@@ -130,6 +134,7 @@ public static class DatabaseSeeder
                 RecordingYear = 1971,
                 RecordingPlace = "Merkinė, Varėnos r.",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[2].Id
             },
 
@@ -141,6 +146,7 @@ public static class DatabaseSeeder
                 RecordingYear = 1969,
                 RecordingPlace = "Rumšiškės, Kaišiadorių r.",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[3].Id
             },
 
@@ -152,6 +158,7 @@ public static class DatabaseSeeder
                 RecordingYear = 1973,
                 RecordingPlace = "Dusetos, Zarasų r.",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[4].Id
             }
         };
