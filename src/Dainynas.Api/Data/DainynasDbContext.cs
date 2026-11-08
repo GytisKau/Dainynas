@@ -65,6 +65,12 @@ public class DainynasDbContext(DbContextOptions<DainynasDbContext> options) : Db
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Song>()
+            .HasOne(s => s.Performer)
+            .WithMany(p => p.Songs)
+            .HasForeignKey(s => s.PerformerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Song>()
             .HasOne(s => s.Owner)
             .WithMany()
             .HasForeignKey(s => s.OwnerId)

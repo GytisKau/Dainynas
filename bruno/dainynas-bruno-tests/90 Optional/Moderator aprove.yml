@@ -1,0 +1,18 @@
+info:
+  name: Moderator aprove
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/moderation/requests/1/approve"
+  auth:
+    type: bearer
+    token: "{{moderatorToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -10,6 +10,7 @@ public class PerformerDto
     public int? BirthYear { get; set; }
     public string? Residence { get; set; }
     public string? PhotoUrl { get; set; }
+    public string PublicationStatus { get; set; } = string.Empty;
 
     public Dictionary<string, LinkDto> Links { get; set; } = [];
 }

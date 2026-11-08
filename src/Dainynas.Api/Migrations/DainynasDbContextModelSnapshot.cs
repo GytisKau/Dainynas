@@ -143,7 +143,7 @@ namespace Dainynas.Api.Migrations
                     b.Property<DateTime>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("SubmittedByUserId")
+                    b.Property<int?>("SubmittedByUserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -360,8 +360,7 @@ namespace Dainynas.Api.Migrations
                     b.HasOne("Dainynas.Api.Models.User", "SubmittedByUser")
                         .WithMany()
                         .HasForeignKey("SubmittedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("ReviewedByUser");
 
@@ -399,7 +398,7 @@ namespace Dainynas.Api.Migrations
                     b.HasOne("Dainynas.Api.Models.Performer", "Performer")
                         .WithMany("Songs")
                         .HasForeignKey("PerformerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Owner");

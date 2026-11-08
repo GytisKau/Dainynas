@@ -24,35 +24,40 @@ public static class DatabaseSeeder
                 BirthYear = 1890,
                 Residence = "Slabada k., Kaišiadorių r.",
                 PhotoUrl =
-                    "https://www.tautosakos-rankrastynas.lt/imgHashed/c2k9OTAwJmZhaWxhcz12YWl6ZGFzL0xUUkZ0LzIzMC5qcGc=.jpg"
+                    "https://www.tautosakos-rankrastynas.lt/imgHashed/c2k9OTAwJmZhaWxhcz12YWl6ZGFzL0xUUkZ0LzIzMC5qcGc=.jpg",
+                PublicationStatus = PublicationStatus.Published
             },
 
             new()
             {
                 Name = "Marija Petrauskienė",
                 BirthYear = 1902,
-                Residence = "Aukštadvaris, Trakų r."
+                Residence = "Aukštadvaris, Trakų r.",
+                PublicationStatus = PublicationStatus.Published
             },
 
             new()
             {
                 Name = "Jonas Kazlauskas",
                 BirthYear = 1898,
-                Residence = "Merkinė, Varėnos r."
+                Residence = "Merkinė, Varėnos r.",
+                PublicationStatus = PublicationStatus.Published 
             },
 
             new()
             {
                 Name = "Antanina Žukauskienė",
                 BirthYear = 1905,
-                Residence = "Rumšiškės, Kaišiadorių r."
+                Residence = "Rumšiškės, Kaišiadorių r.",
+                PublicationStatus = PublicationStatus.Published
             },
 
             new()
             {
                 Name = "Petras Vaitkus",
                 BirthYear = 1901,
-                Residence = "Dusetos, Zarasų r."
+                Residence = "Dusetos, Zarasų r.",
+                PublicationStatus = PublicationStatus.Published
             }
         };
 
