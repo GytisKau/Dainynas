@@ -1,320 +1,707 @@
+
+using System.Security.Claims;
+using System.Text.Json;
 using Dainynas.Api.Data;
 using Dainynas.Api.DTOs.Albums;
 using Dainynas.Api.DTOs.Common;
 using Dainynas.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
+using Npgsql;
 
 namespace Dainynas.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AlbumsController(DainynasDbContext context) : ControllerBase
+public class AlbumsController : ControllerBase
 {
-    private readonly DainynasDbContext _context = context;
+    private readonly DainynasDbContext _context;
+
+    private static readonly JsonSerializerOptions ProposalOptions =
+        new(JsonSerializerDefaults.Web);
+
+    public AlbumsController(DainynasDbContext context)
+    {
+        _context = context;
+    }
+
+    // ---------------- Helpers ----------------
+
+    private int? CurrentUserId() =>
+        int.TryParse(
+            User.FindFirstValue(ClaimTypes.NameIdentifier),
+            out var id)
+                ? id
+                : null;
+
+    private bool IsModeratorOrAdmin() =>
+        User.IsInRole(UserRoles.Moderator) ||
+        User.IsInRole(UserRoles.Admin);
+
+    private bool CanManage(Album album)
+    {
+        var userId = CurrentUserId();
+
+        return IsModeratorOrAdmin() ||
+            (userId.HasValue &&
+             album.OwnerId == userId.Value);
+    }
+
+    private static bool IsSongPublic(Song song) =>
+        song.PublicationStatus == PublicationStatus.Published &&
+        song.IsPublic &&
+        song.Performer.PublicationStatus == PublicationStatus.Published;
+
+    private bool CanRead(Album album) =>
+        CanManage(album) ||
+        (album.PublicationStatus == PublicationStatus.Published &&
+         album.IsPublic &&
+         album.AlbumSongs.All(x => IsSongPublic(x.Song)));
+
+    private bool CanUseSong(Song song, int userId) =>
+        IsModeratorOrAdmin() ||
+        song.OwnerId == userId ||
+        IsSongPublic(song);
+
+    private static bool ValidPagination(int page, int pageSize) =>
+        page >= 1 &&
+        pageSize is >= 1 and <= 100 &&
+        (long)(page - 1) * pageSize <= int.MaxValue;
+
+    private IQueryable<Album> AlbumsWithSongs() =>
+        _context.Albums
+            .AsNoTracking()
+            .Include(a => a.AlbumSongs)
+                .ThenInclude(x => x.Song)
+                    .ThenInclude(s => s.Performer)
+            .AsSplitQuery();
+
+    private IQueryable<Album> PublicAlbumsQuery() =>
+        AlbumsWithSongs().Where(a =>
+            a.PublicationStatus == PublicationStatus.Published &&
+            a.IsPublic &&
+            !a.AlbumSongs.Any(x =>
+                x.Song.PublicationStatus != PublicationStatus.Published ||
+                !x.Song.IsPublic ||
+                x.Song.Performer.PublicationStatus !=
+                    PublicationStatus.Published));
+
+    private AlbumDto ToDto(Album album)
+    {
+        var userId = CurrentUserId();
+
+        var dto = new AlbumDto
+        {
+            Id = album.Id,
+            Title = album.Title,
+            Description = album.Description,
+            IsPublic = album.IsPublic,
+            PublicationStatus = album.PublicationStatus
+        };
+
+        foreach (var entry in album.AlbumSongs.OrderBy(x => x.Position))
+        {
+            // Do not expose another user's private song.
+            if (!IsModeratorOrAdmin() &&
+                !IsSongPublic(entry.Song) &&
+                (!userId.HasValue ||
+                 entry.Song.OwnerId != userId.Value))
+            {
+                continue;
+            }
+
+            var song = new AlbumSongDto
+            {
+                Id = entry.SongId,
+                Title = entry.Song.Title,
+                Position = entry.Position
+            };
+
+            song.Links["song"] = new LinkDto
+            {
+                Href = $"/api/songs/{song.Id}"
+            };
+
+            dto.Songs.Add(song);
+        }
+
+        dto.Links["self"] = new LinkDto
+        {
+            Href = $"/api/albums/{album.Id}"
+        };
+
+        if (CanManage(album))
+        {
+            if (album.PublicationStatus != PublicationStatus.Pending)
+            {
+                dto.Links["update"] = new LinkDto
+                {
+                    Href = $"/api/albums/{album.Id}",
+                    Method = "PUT"
+                };
+            }
+
+            if (album.PublicationStatus == PublicationStatus.Draft)
+            {
+                dto.Links["submit"] = new LinkDto
+                {
+                    Href = $"/api/albums/{album.Id}/submit",
+                    Method = "POST"
+                };
+
+                dto.Links["delete"] = new LinkDto
+                {
+                    Href = $"/api/albums/{album.Id}",
+                    Method = "DELETE"
+                };
+            }
+        }
+
+        return dto;
+    }
+
+    // Validate references and access to referenced songs.
+    private async Task<string?> ValidateSongIds(
+        IReadOnlyList<int> ids,
+        int userId,
+        bool requirePublished)
+    {
+        if (ids.Count != ids.Distinct().Count())
+            return "Album contains duplicate song IDs.";
+
+        if (ids.Any(id => id <= 0))
+            return "Song IDs must be positive.";
+
+        var idArray = ids.ToArray();
+
+        var songs = await _context.Songs
+            .AsNoTracking()
+            .Include(s => s.Performer)
+            .Where(s => idArray.Contains(s.Id))
+            .ToListAsync();
+
+        if (songs.Count != ids.Count)
+            return "Some referenced songs do not exist.";
+
+        if (songs.Any(s => !CanUseSong(s, userId)))
+            return "Some songs are not accessible.";
+
+        if (requirePublished &&
+            songs.Any(s => !IsSongPublic(s)))
+        {
+            return "Public albums require published, public songs.";
+        }
+
+        return null;
+    }
+
+    // Update relationships without removing and re-adding
+    // unchanged AlbumSong composite primary keys.
+    private void ReplaceAlbumSongs(
+        Album album,
+        IReadOnlyList<int> songIds)
+    {
+        var desired = songIds.ToHashSet();
+
+        foreach (var existing in album.AlbumSongs.ToList())
+        {
+            if (!desired.Contains(existing.SongId))
+            {
+                _context.AlbumSongs.Remove(existing);
+                album.AlbumSongs.Remove(existing);
+            }
+        }
+
+        for (var i = 0; i < songIds.Count; i++)
+        {
+            var songId = songIds[i];
+
+            var existing = album.AlbumSongs
+                .FirstOrDefault(x => x.SongId == songId);
+
+            if (existing is not null)
+            {
+                existing.Position = i + 1;
+            }
+            else
+            {
+                album.AlbumSongs.Add(new AlbumSong
+                {
+                    AlbumId = album.Id,
+                    SongId = songId,
+                    Position = i + 1
+                });
+            }
+        }
+    }
+
+    // ---------------- GET LIST ----------------
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<AlbumDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<AlbumDto>>> GetAll(
-        [FromQuery] string? title)
+    [ProducesResponseType(
+        typeof(PagedResponse<AlbumDto>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResponse<AlbumDto>>> GetAll(
+        string? title = null,
+        int page = 1,
+        int pageSize = 10)
     {
-        var query = _context.Albums.AsQueryable();
+        if (!ValidPagination(page, pageSize))
+            return BadRequest(new { message = "Invalid pagination." });
+
+        var query = PublicAlbumsQuery();
 
         if (!string.IsNullOrWhiteSpace(title))
         {
+            var search = title.Trim().ToLower();
+
             query = query.Where(a =>
-                a.Title.ToLower().Contains(title.ToLower()));
+                a.Title.ToLower().Contains(search));
         }
 
-        var albums = await query
-            .Select(a => new AlbumDto
-            {
-                Id = a.Id,
-                Title = a.Title,
-                Description = a.Description,
-                IsPublic = a.IsPublic,
+        var total = await query.CountAsync();
 
-                Songs = a.AlbumSongs
-                    .OrderBy(albumSong => albumSong.Position)
-                    .Select(albumSong => new AlbumSongDto
-                    {
-                        Id = albumSong.Song.Id,
-                        Title = albumSong.Song.Title,
-                        Position = albumSong.Position
-                    })
-                    .ToList()
-            })
+        var albums = await query
+            .OrderBy(a => a.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        foreach (var album in albums)
-            AddHypermedia(album);
-
-        return Ok(albums);
+        return Ok(new PagedResponse<AlbumDto>
+        {
+            Items = albums.Select(ToDto).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = total,
+            TotalPages = (int)Math.Ceiling(
+                total / (double)pageSize)
+        });
     }
 
+    // ---------------- GET MINE ----------------
+
+    [Authorize]
+    [HttpGet("mine")]
+    [ProducesResponseType(
+        typeof(PagedResponse<AlbumDto>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResponse<AlbumDto>>> GetMine(
+        int page = 1,
+        int pageSize = 10)
+    {
+        var userId = CurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        if (!ValidPagination(page, pageSize))
+            return BadRequest(new { message = "Invalid pagination." });
+
+        var query = AlbumsWithSongs()
+            .Where(a => a.OwnerId == userId.Value);
+
+        var total = await query.CountAsync();
+
+        var albums = await query
+            .OrderByDescending(a => a.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new PagedResponse<AlbumDto>
+        {
+            Items = albums.Select(ToDto).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = total,
+            TotalPages = (int)Math.Ceiling(
+                total / (double)pageSize)
+        });
+    }
+
+    // ---------------- GET BY ID ----------------
+
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(AlbumDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(AlbumDto),
+        StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AlbumDto>> GetById(int id)
     {
-        var album = await _context.Albums
-            .Where(a => a.Id == id)
-            .Select(a => new AlbumDto
-            {
-                Id = a.Id,
-                Title = a.Title,
-                Description = a.Description,
-                IsPublic = a.IsPublic,
+        var album = await AlbumsWithSongs()
+            .FirstOrDefaultAsync(a => a.Id == id);
 
-                Songs = a.AlbumSongs
-                    .OrderBy(albumSong => albumSong.Position)
-                    .Select(albumSong => new AlbumSongDto
-                    {
-                        Id = albumSong.Song.Id,
-                        Title = albumSong.Song.Title,
-                        Position = albumSong.Position
-                    })
-                    .ToList()
-            })
-            .FirstOrDefaultAsync();
-
-        if (album is null)
-        {
+        if (album is null || !CanRead(album))
             return NotFound();
-        }
 
-        AddHypermedia(album);
-
-        return Ok(album);
+        return Ok(ToDto(album));
     }
+
+    // ---------------- CREATE ----------------
 
     [Authorize]
     [HttpPost]
-    [ProducesResponseType(typeof(AlbumDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(
+        typeof(AlbumDto),
+        StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<AlbumDto>> Create(CreateAlbumDto dto)
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AlbumDto>> Create(
+        CreateAlbumDto dto)
     {
-        var duplicateSongIds = dto.SongIds
-            .GroupBy(id => id)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToList();
+        var userId = CurrentUserId();
+        if (userId is null) return Unauthorized();
 
-        if (duplicateSongIds.Count > 0)
-        {
-            return BadRequest(new
-            {
-                message = "The same song cannot appear more than once in an album.",
-                duplicateSongIds
-            });
-        }
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            return BadRequest(new { message = "Title is required." });
 
-        var existingSongIds = await _context.Songs
-            .Where(song => dto.SongIds.Contains(song.Id))
-            .Select(song => song.Id)
-            .ToListAsync();
+        var ids = dto.SongIds ?? [];
 
-        var missingSongIds = dto.SongIds
-            .Except(existingSongIds)
-            .ToList();
+        var error = await ValidateSongIds(
+            ids, userId.Value, requirePublished: false);
 
-        if (missingSongIds.Count > 0)
-        {
-            return BadRequest(new
-            {
-                message = "One or more songs do not exist.",
-                missingSongIds
-            });
-        }
+        if (error is not null)
+            return BadRequest(new { message = error });
 
         var album = new Album
         {
-            Title = dto.Title,
+            Title = dto.Title.Trim(),
             Description = dto.Description,
-            IsPublic = dto.IsPublic
+            IsPublic = dto.IsPublic,
+            OwnerId = userId.Value,
+            PublicationStatus = PublicationStatus.Draft,
+
+            AlbumSongs = ids
+                .Select((songId, index) => new AlbumSong
+                {
+                    SongId = songId,
+                    Position = index + 1
+                })
+                .ToList()
         };
 
-        for (var i = 0; i < dto.SongIds.Count; i++)
-        {
-            album.AlbumSongs.Add(new AlbumSong
-            {
-                SongId = dto.SongIds[i],
-                Position = i + 1
-            });
-        }
-
         _context.Albums.Add(album);
-
         await _context.SaveChangesAsync();
 
-        var result = await _context.Albums
-            .Where(a => a.Id == album.Id)
-            .Select(a => new AlbumDto
-            {
-                Id = a.Id,
-                Title = a.Title,
-                Description = a.Description,
-                IsPublic = a.IsPublic,
-
-                Songs = a.AlbumSongs
-                    .OrderBy(albumSong => albumSong.Position)
-                    .Select(albumSong => new AlbumSongDto
-                    {
-                        Id = albumSong.Song.Id,
-                        Title = albumSong.Song.Title,
-                        Position = albumSong.Position
-                    })
-                    .ToList()
-            })
-            .SingleAsync();
-
-        AddHypermedia(result);
+        var saved = await AlbumsWithSongs()
+            .FirstAsync(a => a.Id == album.Id);
 
         return CreatedAtAction(
             nameof(GetById),
             new { id = album.Id },
-            result);
+            ToDto(saved));
     }
 
-    [Authorize(Roles = UserRoles.Moderator + "," + UserRoles.Admin)]
+    // ---------------- UPDATE ----------------
+
+    [Authorize]
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(
         int id,
         UpdateAlbumDto dto)
     {
+        var userId = CurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            return BadRequest(new { message = "Title is required." });
+
+        dto.Title = dto.Title.Trim();
+
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
         var album = await _context.Albums
-            .Include(a => a.AlbumSongs)
-            .FirstOrDefaultAsync(a => a.Id == id);
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Albums"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
 
         if (album is null)
-        {
             return NotFound();
-        }
 
-        var duplicateSongIds = dto.SongIds
-            .GroupBy(songId => songId)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToList();
+        if (!CanManage(album))
+            return Forbid();
 
-        if (duplicateSongIds.Count > 0)
+        if (album.PublicationStatus == PublicationStatus.Pending)
         {
-            return BadRequest(new
+            return Conflict(new
             {
-                message = "The same song cannot appear more than once in an album.",
-                duplicateSongIds
+                message = "Album is awaiting moderation."
             });
         }
 
-        var existingSongIds = await _context.Songs
-            .Where(song => dto.SongIds.Contains(song.Id))
-            .Select(song => song.Id)
-            .ToListAsync();
+        var ids = dto.SongIds ?? [];
 
-        var missingSongIds = dto.SongIds
-            .Except(existingSongIds)
-            .ToList();
+        var error = await ValidateSongIds(
+            ids,
+            userId.Value,
+            requirePublished:
+                album.PublicationStatus == PublicationStatus.Published
+                && dto.IsPublic);
 
-        if (missingSongIds.Count > 0)
+        if (error is not null)
+            return BadRequest(new { message = error });
+
+        if (album.PublicationStatus == PublicationStatus.Draft)
         {
-            return BadRequest(new
+            await _context.Entry(album)
+                .Collection(a => a.AlbumSongs)
+                .LoadAsync();
+
+            album.Title = dto.Title;
+            album.Description = dto.Description;
+            album.IsPublic = dto.IsPublic;
+
+            ReplaceAlbumSongs(album, ids);
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return NoContent();
+        }
+
+        if (album.PublicationStatus != PublicationStatus.Published)
+        {
+            return Conflict(new
             {
-                message = "One or more songs do not exist.",
-                missingSongIds
+                message = "Unknown publication status."
             });
         }
 
-        album.Title = dto.Title;
-        album.Description = dto.Description;
-        album.IsPublic = dto.IsPublic;
+        var hasPending = await _context.ModerationRequests
+            .AnyAsync(r =>
+                r.EntityType == ModerationEntityTypes.Album &&
+                r.EntityId == id &&
+                r.Status == ModerationStatuses.Pending);
 
-        _context.AlbumSongs.RemoveRange(album.AlbumSongs);
-
-        album.AlbumSongs.Clear();
-
-        for (var i = 0; i < dto.SongIds.Count; i++)
+        if (hasPending)
         {
-            album.AlbumSongs.Add(new AlbumSong
+            return Conflict(new
             {
-                AlbumId = album.Id,
-                SongId = dto.SongIds[i],
-                Position = i + 1
+                message = "A moderation request already exists."
             });
         }
 
-        await _context.SaveChangesAsync();
+        // Published album remains unchanged.
+        var request = new ModerationRequest
+        {
+            EntityType = ModerationEntityTypes.Album,
+            EntityId = album.Id,
+            RequestType = ModerationRequestTypes.Update,
+            Status = ModerationStatuses.Pending,
+            ProposedDataJson = JsonSerializer.Serialize(
+                dto, ProposalOptions),
+            SubmittedByUserId = userId.Value,
+            SubmittedAt = DateTime.UtcNow
+        };
 
-        return NoContent();
+        _context.ModerationRequests.Add(request);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation
+            })
+        {
+            return Conflict(new
+            {
+                message = "A moderation request already exists."
+            });
+        }
+
+        return Accepted(new
+        {
+            requestId = request.Id,
+            status = request.Status,
+            message = "Album changes are awaiting moderation."
+        });
     }
 
-    [Authorize(Roles = UserRoles.Moderator + "," + UserRoles.Admin)]
-    [HttpDelete("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    // ---------------- SUBMIT ----------------
+
+    [Authorize]
+    [HttpPost("{id:int}/submit")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(int id)
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Submit(int id)
     {
+        var userId = CurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
         var album = await _context.Albums
-            .Include(a => a.AlbumSongs)
-            .FirstOrDefaultAsync(a => a.Id == id);
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Albums"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
 
         if (album is null)
-        {
             return NotFound();
+
+        if (!CanManage(album))
+            return Forbid();
+
+        if (album.PublicationStatus != PublicationStatus.Draft)
+        {
+            return Conflict(new
+            {
+                message = "Only drafts can be submitted."
+            });
         }
 
+        if (album.IsPublic)
+        {
+            var hasInvalidSongs = await _context.AlbumSongs
+                .Where(x => x.AlbumId == id)
+                .AnyAsync(x =>
+                    x.Song.PublicationStatus !=
+                        PublicationStatus.Published ||
+                    !x.Song.IsPublic ||
+                    x.Song.Performer.PublicationStatus !=
+                        PublicationStatus.Published);
+
+            if (hasInvalidSongs)
+            {
+                return Conflict(new
+                {
+                    message =
+                        "Publish all referenced songs before the album."
+                });
+            }
+        }
+
+        var hasPending = await _context.ModerationRequests
+            .AnyAsync(r =>
+                r.EntityType == ModerationEntityTypes.Album &&
+                r.EntityId == id &&
+                r.Status == ModerationStatuses.Pending);
+
+        if (hasPending)
+        {
+            return Conflict(new
+            {
+                message = "A moderation request already exists."
+            });
+        }
+
+        album.PublicationStatus = PublicationStatus.Pending;
+
+        var request = new ModerationRequest
+        {
+            EntityType = ModerationEntityTypes.Album,
+            EntityId = album.Id,
+            RequestType = ModerationRequestTypes.Publish,
+            Status = ModerationStatuses.Pending,
+            SubmittedByUserId = userId.Value,
+            SubmittedAt = DateTime.UtcNow
+        };
+
+        _context.ModerationRequests.Add(request);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation
+            })
+        {
+            return Conflict(new
+            {
+                message = "A moderation request already exists."
+            });
+        }
+
+        return Accepted(new
+        {
+            requestId = request.Id,
+            status = request.Status,
+            message = "Album submitted for publication."
+        });
+    }
+
+    // ---------------- DELETE ----------------
+
+    [Authorize]
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete(int id)
+    {
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        var album = await _context.Albums
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Albums"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
+
+        if (album is null)
+            return NotFound();
+
+        if (!CanManage(album))
+            return Forbid();
+
+        if (album.PublicationStatus != PublicationStatus.Draft)
+        {
+            return Conflict(new
+            {
+                message = "Only unpublished drafts can be deleted."
+            });
+        }
+
+        var hasHistory = await _context.ModerationRequests
+            .AnyAsync(r =>
+                r.EntityType == ModerationEntityTypes.Album &&
+                r.EntityId == id);
+
+        if (hasHistory)
+        {
+            return Conflict(new
+            {
+                message = "Album has moderation history."
+            });
+        }
+
+        await _context.Entry(album)
+            .Collection(a => a.AlbumSongs)
+            .LoadAsync();
+
+        _context.AlbumSongs.RemoveRange(album.AlbumSongs);
         _context.Albums.Remove(album);
 
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return NoContent();
-    }
-
-    private static void AddLinks(AlbumDto album)
-    {
-        album.Links = new Dictionary<string, LinkDto>
-        {
-            ["self"] = new()
-            {
-                Href = $"/api/albums/{album.Id}",
-                Method = "GET"
-            },
-
-            ["update"] = new()
-            {
-                Href = $"/api/albums/{album.Id}",
-                Method = "PUT"
-            },
-
-            ["delete"] = new()
-            {
-                Href = $"/api/albums/{album.Id}",
-                Method = "DELETE"
-            }
-        };
-    }
-
-    private static void AddSongLinks(AlbumDto album)
-    {
-        foreach (var song in album.Songs)
-        {
-            song.Links = new Dictionary<string, LinkDto>
-            {
-                ["song"] = new()
-                {
-                    Href = $"/api/songs/{song.Id}",
-                    Method = "GET"
-                }
-            };
-        }
-    }
-
-    private static void AddHypermedia(AlbumDto album)
-    {
-        AddLinks(album);
-        AddSongLinks(album);
     }
 }

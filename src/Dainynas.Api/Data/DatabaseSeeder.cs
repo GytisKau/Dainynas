@@ -174,28 +174,13 @@ public static class DatabaseSeeder
                 Description =
                     "Kaišiadorių krašto folklorinių dainų rinkinys.",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 AlbumSongs = new List<AlbumSong>
                 {
-                    new()
-                    {
-                        SongId = songs[0].Id,
-                        Position = 1
-                    },
-                    new()
-                    {
-                        SongId = songs[1].Id,
-                        Position = 2
-                    },
-                    new()
-                    {
-                        SongId = songs[2].Id,
-                        Position = 3
-                    },
-                    new()
-                    {
-                        SongId = songs[5].Id,
-                        Position = 4
-                    }
+                    new(){ SongId = songs[0].Id, Position = 1 },
+                    new(){ SongId = songs[1].Id, Position = 2 },
+                    new(){ SongId = songs[2].Id, Position = 3 },
+                    new(){ SongId = songs[5].Id, Position = 4 }
                 }
             },
 
@@ -205,49 +190,26 @@ public static class DatabaseSeeder
                 Description =
                     "Dzūkijos regiono tradicinių dainų rinkinys.",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 AlbumSongs = new List<AlbumSong>
                 {
-                    new()
-                    {
-                        SongId = songs[2].Id,
-                        Position = 1
-                    },
-                    new()
-                    {
-                        SongId = songs[4].Id,
-                        Position = 2
-                    }
+                    new(){ SongId = songs[2].Id, Position = 1 },
+                    new(){ SongId = songs[4].Id, Position = 2 }
                 }
             },
 
             new()
             {
                 Title = "Lietuvių liaudies dainų rinktinė",
-                Description =
-                    "Įvairių Lietuvos regionų folklorinių dainų rinktinė.",
+                Description = "Įvairių Lietuvos regionų folklorinių dainų rinktinė.",
                 IsPublic = true,
+                PublicationStatus = PublicationStatus.Published,
                 AlbumSongs = new List<AlbumSong>
                 {
-                    new()
-                    {
-                        SongId = songs[0].Id,
-                        Position = 1
-                    },
-                    new()
-                    {
-                        SongId = songs[3].Id,
-                        Position = 2
-                    },
-                    new()
-                    {
-                        SongId = songs[4].Id,
-                        Position = 3
-                    },
-                    new()
-                    {
-                        SongId = songs[6].Id,
-                        Position = 4
-                    }
+                    new(){ SongId = songs[0].Id, Position = 1 },
+                    new(){ SongId = songs[3].Id, Position = 2 },
+                    new(){ SongId = songs[4].Id, Position = 3 },
+                    new(){ SongId = songs[6].Id, Position = 4}
                 }
             }
         };
