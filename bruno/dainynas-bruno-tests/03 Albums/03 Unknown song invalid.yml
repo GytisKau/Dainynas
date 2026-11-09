@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"Unknown ID","description":"Invalid","isPublic":true,"songIds":[99999999]}
+      {"title":"Unknown ID","description":"Invalid","songIds":[99999999]}
 runtime:
   scripts:
   - type: tests

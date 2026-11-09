@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Dependency Song","lyrics":"Priklausomybės tikrinimas.","recordingYear":1966,"recordingPlace":"Vilnius","externalArchiveUrl":null,"audioUrl":null,"isPublic":true,"performerId":{{dependencyPerformerId}}}
+      {"title":"{{runTag}} Dependency Song","lyrics":"Priklausomybės tikrinimas.","recordingYear":1966,"recordingPlace":"Vilnius","externalArchiveUrl":null,"audioUrl":null,"performerId":{{dependencyPerformerId}}}
 runtime:
   scripts:
   - type: after-response

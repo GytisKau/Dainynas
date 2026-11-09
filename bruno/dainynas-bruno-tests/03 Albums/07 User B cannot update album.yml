@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"STOLEN","description":"","isPublic":true,"songIds":[{{songAId}},{{songBId}}]}
+      {"title":"STOLEN","description":"","songIds":[{{songAId}},{{songBId}}]}
 runtime:
   scripts:
   - type: tests

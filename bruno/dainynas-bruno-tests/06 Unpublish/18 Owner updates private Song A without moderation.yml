@@ -1,0 +1,25 @@
+info:
+  name: Owner updates private Song A without moderation
+  type: http
+  seq: 18
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/songs/{{songAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"{{runTag}} Song A PRIVATE EDIT","lyrics":"Privatus tekstas po unpublish","recordingYear":1965,"recordingPlace":"Kaišiadorys","externalArchiveUrl":null,"audioUrl":null,"performerId":{{performerAId}}}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

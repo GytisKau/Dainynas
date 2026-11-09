@@ -1,0 +1,25 @@
+info:
+  name: Owner updates private album without moderation
+  type: http
+  seq: 12
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/albums/{{albumAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"{{runTag}} Album PRIVATE EDIT","description":"edited privately after unpublish","songIds":[{{songBId}},{{songAId}}]}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

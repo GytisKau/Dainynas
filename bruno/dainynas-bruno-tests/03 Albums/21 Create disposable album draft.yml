@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Disposable Album","description":"Juodraštis ištrynimui","isPublic":false,"songIds":[{{songAId}}]}
+      {"title":"{{runTag}} Disposable Album","description":"Juodraštis ištrynimui","songIds":[{{songAId}}]}
 runtime:
   scripts:
   - type: after-response

@@ -1,0 +1,25 @@
+info:
+  name: Owner changes unpublished performer
+  type: http
+  seq: 25
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/performers/{{performerAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"name":"{{runTag}} Performer PRIVATE EDIT","birthYear":1900,"residence":"Kaišiadorys","photoUrl":null}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

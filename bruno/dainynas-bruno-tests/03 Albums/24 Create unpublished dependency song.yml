@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Unpublished Album Song","lyrics":"Ne vieša","recordingYear":1965,"recordingPlace":"Vilnius","externalArchiveUrl":null,"audioUrl":null,"isPublic":true,"performerId":{{performerAId}}}
+      {"title":"{{runTag}} Unpublished Album Song","lyrics":"Ne vieša","recordingYear":1965,"recordingPlace":"Vilnius","externalArchiveUrl":null,"audioUrl":null,"performerId":{{performerAId}}}
 runtime:
   scripts:
   - type: after-response

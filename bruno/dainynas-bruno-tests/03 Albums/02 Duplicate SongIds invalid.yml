@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"Duplicate IDs","description":"Invalid","isPublic":true,"songIds":[{{songAId}},{{songAId}}]}
+      {"title":"Duplicate IDs","description":"Invalid","songIds":[{{songAId}},{{songAId}}]}
 runtime:
   scripts:
   - type: tests

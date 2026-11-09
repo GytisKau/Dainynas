@@ -1,0 +1,22 @@
+info:
+  name: Owner verifies private album edit
+  type: http
+  seq: 13
+http:
+  method: GET
+  url: '{{baseUrl}}/api/albums/{{albumAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("Private edit applied immediately", () => { expect(res.body.title).to.equal(bru.getVar("runTag") + " Album PRIVATE EDIT"); expect(res.body.songs.map(x => x.id)).to.deep.equal([Number(bru.getVar("songBId")),Number(bru.getVar("songAId"))]); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

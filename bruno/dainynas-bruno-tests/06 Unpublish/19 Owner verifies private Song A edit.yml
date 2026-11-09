@@ -1,0 +1,22 @@
+info:
+  name: Owner verifies private Song A edit
+  type: http
+  seq: 19
+http:
+  method: GET
+  url: '{{baseUrl}}/api/songs/{{songAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("Private song edit saved immediately", () => { expect(res.body.title).to.equal(bru.getVar("runTag") + " Song A PRIVATE EDIT"); expect(res.body.publicationStatus).to.equal("Draft"); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

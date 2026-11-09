@@ -8,7 +8,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"Forbidden","isPublic":true,"performerId":{{performerAId}}}
+      {"title":"Forbidden","performerId":{{performerAId}}}
 runtime:
   scripts:
   - type: tests

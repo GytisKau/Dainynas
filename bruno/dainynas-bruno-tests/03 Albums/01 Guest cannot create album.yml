@@ -8,7 +8,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"Forbidden","description":"","isPublic":true,"songIds":[{{songAId}}]}
+      {"title":"Forbidden","description":"","songIds":[{{songAId}}]}
 runtime:
   scripts:
   - type: tests

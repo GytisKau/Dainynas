@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Album FINAL","description":"Moderatorius patvirtins tvarką","isPublic":true,"songIds":[{{songAId}},{{songBId}}]}
+      {"title":"{{runTag}} Album FINAL","description":"Moderatorius patvirtins tvarką","songIds":[{{songAId}},{{songBId}}]}
 runtime:
   scripts:
   - type: after-response

@@ -1,14 +1,14 @@
 name: Local
 variables:
-  - name: baseUrl
-    value: http://localhost:8080
-  - name: adminEmail
-    value: admin@dainynas.lt
-  - name: moderatorEmail
-    value: moderator@dainynas.lt
-  - secret: true
-    name: adminPassword
-    description: Įvesk į Bruno Local aplinką; nekeisk faile
-  - secret: true
-    name: moderatorPassword
-    description: Įvesk į Bruno Local aplinką; nekeisk faile
+- name: baseUrl
+  value: http://localhost:8080
+- name: adminEmail
+  value: admin@dainynas.lt
+- name: moderatorEmail
+  value: moderator@dainynas.lt
+- name: adminPassword
+  secret: true
+  description: Įvesk į Bruno Local aplinką; nekeisk faile
+- name: moderatorPassword
+  secret: true
+  description: Įvesk į Bruno Local aplinką; nekeisk faile

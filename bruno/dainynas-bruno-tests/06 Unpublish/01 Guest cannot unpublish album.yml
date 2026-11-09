@@ -1,0 +1,18 @@
+info:
+  name: Guest cannot unpublish album
+  type: http
+  seq: 1
+http:
+  method: POST
+  url: '{{baseUrl}}/api/albums/{{albumAId}}/unpublish'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 401", function () { expect(res.status).to.equal(401); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

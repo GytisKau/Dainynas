@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Unpublished Album","description":"Negalima publikuoti","isPublic":true,"songIds":[{{albumDependencySongId}}]}
+      {"title":"{{runTag}} Unpublished Album","description":"Negalima publikuoti","songIds":[{{albumDependencySongId}}]}
 runtime:
   scripts:
   - type: after-response

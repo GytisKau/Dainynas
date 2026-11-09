@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Album","description":"Dainynas testų albumas","isPublic":true,"songIds":[{{songAId}},{{songBId}}]}
+      {"title":"{{runTag}} Album","description":"Dainynas testų albumas","songIds":[{{songAId}},{{songBId}}]}
 runtime:
   scripts:
   - type: after-response

@@ -1,0 +1,18 @@
+info:
+  name: Guest cannot view unpublished performer
+  type: http
+  seq: 24
+http:
+  method: GET
+  url: '{{baseUrl}}/api/performers/{{performerAId}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 404", function () { expect(res.status).to.equal(404); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

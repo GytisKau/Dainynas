@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"STOLEN","lyrics":"None","recordingYear":1965,"recordingPlace":"Kaunas","externalArchiveUrl":null,"audioUrl":null,"isPublic":true,"performerId":{{performerAId}}}
+      {"title":"STOLEN","lyrics":"None","recordingYear":1965,"recordingPlace":"Kaunas","externalArchiveUrl":null,"audioUrl":null,"performerId":{{performerAId}}}
 runtime:
   scripts:
   - type: tests

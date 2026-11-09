@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Album DRAFT","description":"Nauja tvarka juodraštyje","isPublic":true,"songIds":[{{songBId}},{{songAId}}]}
+      {"title":"{{runTag}} Album DRAFT","description":"Nauja tvarka juodraštyje","songIds":[{{songBId}},{{songAId}}]}
 runtime:
   scripts:
   - type: tests

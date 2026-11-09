@@ -1,0 +1,7 @@
+info:
+  name: 06 Unpublish
+  type: folder
+  seq: 7
+docs:
+  content: Atšaukimas, priklausomybių apsauga, Draft redagavimas, pakartotinis publikavimas
+  type: text/markdown

@@ -11,7 +11,7 @@ http:
   body:
     type: json
     data: |-
-      {"title":"{{runTag}} Song A FINAL","lyrics":"Galutinis patvirtintas tekstas.","recordingYear":1965,"recordingPlace":"Kaišiadorys","externalArchiveUrl":null,"audioUrl":null,"isPublic":true,"performerId":{{performerAId}}}
+      {"title":"{{runTag}} Song A FINAL","lyrics":"Galutinis patvirtintas tekstas.","recordingYear":1965,"recordingPlace":"Kaišiadorys","externalArchiveUrl":null,"audioUrl":null,"performerId":{{performerAId}}}
 runtime:
   scripts:
   - type: after-response
