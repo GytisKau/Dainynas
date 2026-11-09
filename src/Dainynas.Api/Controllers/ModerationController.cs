@@ -284,31 +284,22 @@ public class ModerationController(DainynasDbContext context) : ControllerBase
 
         var performer = await _context.Performers.FindAsync(dto.PerformerId);
 
-        if (performer is null)
-            return "Referenced performer does not exist.";
-
-        if (dto.IsPublic &&
+        if (performer is null ||
             performer.PublicationStatus != PublicationStatus.Published)
         {
-            return "Cannot publish a song with an unpublished performer.";
+            return "A published song requires a published performer.";
         }
 
-        var wouldBecomeInaccessible =
-            !dto.IsPublic ||
-            performer.PublicationStatus != PublicationStatus.Published;
-
-        if (wouldBecomeInaccessible)
+        if (song.PerformerId != dto.PerformerId)
         {
-            var belongsToPublicAlbum = await _context.AlbumSongs
+            var usedInPublishedAlbum = await _context.AlbumSongs
                 .AnyAsync(x =>
                     x.SongId == song.Id &&
-                    x.Album.IsPublic &&
-                    x.Album.PublicationStatus ==
-                        PublicationStatus.Published);
+                    x.Album.PublicationStatus == PublicationStatus.Published);
 
-            if (belongsToPublicAlbum)
-            {
-                return "Cannot hide a song used by a public album.";
+            if (usedInPublishedAlbum) {
+                return "Cannot change the performer of a song " +
+                    "used by a published album.";
             }
         }
 
@@ -318,7 +309,6 @@ public class ModerationController(DainynasDbContext context) : ControllerBase
         song.RecordingPlace = dto.RecordingPlace;
         song.ExternalArchiveUrl = dto.ExternalArchiveUrl;
         song.AudioUrl = dto.AudioUrl;
-        song.IsPublic = dto.IsPublic;
         song.PerformerId = dto.PerformerId;
 
         return null;
@@ -357,18 +347,15 @@ public class ModerationController(DainynasDbContext context) : ControllerBase
         if (songs.Count != songIds.Count)
             return "Some referenced songs do not exist.";
 
-        if (dto.IsPublic &&
-            songs.Any(s =>
-                !s.IsPublic ||
+        if (songs.Any(s =>
                 s.PublicationStatus != PublicationStatus.Published ||
                 s.Performer.PublicationStatus != PublicationStatus.Published))
         {
-            return "Public album contains unpublished or private songs.";
+            return "Public album contains unpublished songs.";
         }
 
         album.Title = dto.Title.Trim();
         album.Description = dto.Description;
-        album.IsPublic = dto.IsPublic;
 
         var desired = songIds.ToHashSet();
 
@@ -482,16 +469,15 @@ public class ModerationController(DainynasDbContext context) : ControllerBase
                         });
                     }
 
-                    var performer = await _context.Performers.FindAsync(song.PerformerId);
+                    var performerIsPublished = await _context.Performers
+                        .AnyAsync(p =>
+                            p.Id == song.PerformerId &&
+                            p.PublicationStatus == PublicationStatus.Published);
 
-                    if (performer is null ||
-                        (song.IsPublic &&
-                        performer.PublicationStatus !=
-                            PublicationStatus.Published))
-                    {
-                        error = "Song performer is not published.";
-                        break;
-                    }
+                    if (!performerIsPublished)
+                        return Conflict(new {
+                            message = "Song performer is not published."
+                        });
 
                     song.PublicationStatus = PublicationStatus.Published;
 
@@ -516,26 +502,22 @@ public class ModerationController(DainynasDbContext context) : ControllerBase
                         });
                     }
 
-                    if (album.IsPublic)
+                    var songIds = album.AlbumSongs
+                        .Select(s => s.SongId)
+                        .ToList();
+
+                    var validSongs = await _context.Songs
+                        .CountAsync(s =>
+                            songIds.Contains(s.Id) &&
+                            s.PublicationStatus == PublicationStatus.Published &&
+                            s.Performer.PublicationStatus == PublicationStatus.Published);
+
+                    if (validSongs != songIds.Count)
                     {
-                        var songIds = album.AlbumSongs
-                            .Select(s => s.SongId)
-                            .ToList();
-
-                        var validSongs = await _context.Songs
-                            .CountAsync(s =>
-                                songIds.Contains(s.Id) &&
-                                s.IsPublic &&
-                                s.PublicationStatus == PublicationStatus.Published &&
-                                s.Performer.PublicationStatus == PublicationStatus.Published);
-
-                        if (validSongs != songIds.Count)
-                        {
-                            error = "Album contains unpublished songs.";
-                            break;
-                        }
+                        error = "Album contains unpublished songs.";
+                        break;
                     }
-
+                    
                     album.PublicationStatus = PublicationStatus.Published;
 
                     break;

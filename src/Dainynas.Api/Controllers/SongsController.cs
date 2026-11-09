@@ -36,7 +36,6 @@ public class SongsController(DainynasDbContext context) : ControllerBase
 
         return song.PublicationStatus ==
                    PublicationStatus.Published &&
-               song.IsPublic &&
                song.Performer.PublicationStatus ==
                    PublicationStatus.Published;
     }
@@ -64,7 +63,6 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             RecordingPlace = song.RecordingPlace,
             ExternalArchiveUrl = song.ExternalArchiveUrl,
             AudioUrl = song.AudioUrl,
-            IsPublic = song.IsPublic,
             PerformerId = song.PerformerId,
             PerformerName = performerName,
             PublicationStatus = song.PublicationStatus
@@ -134,7 +132,6 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             .Where(s =>
                 s.PublicationStatus ==
                     PublicationStatus.Published &&
-                s.IsPublic &&
                 s.Performer.PublicationStatus ==
                     PublicationStatus.Published);
     }
@@ -306,7 +303,6 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             RecordingPlace = dto.RecordingPlace,
             ExternalArchiveUrl = dto.ExternalArchiveUrl,
             AudioUrl = dto.AudioUrl,
-            IsPublic = dto.IsPublic,
             PerformerId = performer.Id,
             Performer = performer,
             OwnerId = userId.Value,
@@ -407,7 +403,6 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             song.RecordingPlace = dto.RecordingPlace;
             song.ExternalArchiveUrl = dto.ExternalArchiveUrl;
             song.AudioUrl = dto.AudioUrl;
-            song.IsPublic = dto.IsPublic;
             song.PerformerId = dto.PerformerId;
 
             await _context.SaveChangesAsync();
@@ -416,25 +411,15 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             return NoContent();
         }
 
-        if (song.PublicationStatus !=
-            PublicationStatus.Published)
-        {
-            return Conflict(new
-            {
+        if (song.PublicationStatus != PublicationStatus.Published)
+            return Conflict(new {
                 message = "Unknown publication status."
             });
-        }
 
-        if (dto.IsPublic &&
-            performer.PublicationStatus !=
-                PublicationStatus.Published)
-        {
-            return Conflict(new
-            {
-                message =
-                    "A public song requires a published performer."
+        if (performer.PublicationStatus != PublicationStatus.Published)
+            return Conflict(new {
+                message = "A public song requires a published performer."
             });
-        }
 
         var hasPending = await _context.ModerationRequests
             .AnyAsync(r =>
@@ -443,12 +428,9 @@ public class SongsController(DainynasDbContext context) : ControllerBase
                 r.Status == ModerationStatuses.Pending);
 
         if (hasPending)
-        {
-            return Conflict(new
-            {
+            return Conflict(new {
                 message = "A moderation request already exists."
             });
-        }
 
         // Do not modify the published Song entity.
         // Store the proposed version separately.
@@ -477,8 +459,7 @@ public class SongsController(DainynasDbContext context) : ControllerBase
                 SqlState: PostgresErrorCodes.UniqueViolation
             })
         {
-            return Conflict(new
-            {
+            return Conflict(new {
                 message = "A moderation request already exists."
             });
         }
@@ -547,16 +528,10 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             });
         }
 
-        if (song.IsPublic &&
-            performer.PublicationStatus !=
-                PublicationStatus.Published)
-        {
-            return Conflict(new
-            {
-                message =
-                    "Publish the performer before submitting this song."
+        if (performer.PublicationStatus != PublicationStatus.Published)
+            return Conflict(new {
+                message = "Publish the performer before submitting this song."
             });
-        }
 
         var hasPending = await _context.ModerationRequests
             .AnyAsync(r =>
@@ -565,12 +540,9 @@ public class SongsController(DainynasDbContext context) : ControllerBase
                 r.Status == ModerationStatuses.Pending);
 
         if (hasPending)
-        {
-            return Conflict(new
-            {
+            return Conflict(new {
                 message = "A moderation request already exists."
             });
-        }
 
         song.PublicationStatus = PublicationStatus.Pending;
 
@@ -657,16 +629,13 @@ public class SongsController(DainynasDbContext context) : ControllerBase
         var belongsToPublicAlbum = await _context.AlbumSongs
             .AnyAsync(x =>
                 x.SongId == id &&
-                x.Album.PublicationStatus ==
-                    PublicationStatus.Published &&
-                x.Album.IsPublic);
+                x.Album.PublicationStatus == PublicationStatus.Published);
 
         if (belongsToPublicAlbum)
             return Conflict(new {
                 message = "Cannot unpublish a song used by a public album."
             });
 
-        song.IsPublic = false;
         song.PublicationStatus = PublicationStatus.Draft;
 
         await _context.SaveChangesAsync();

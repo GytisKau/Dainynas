@@ -22,8 +22,6 @@ public class CreateSongDto
     [Url]
     public string? AudioUrl { get; set; }
 
-    public bool IsPublic { get; set; }
-
     [Range(1, int.MaxValue)]
     public int PerformerId { get; set; }
 }

@@ -34,11 +34,8 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
             return true;
         }
 
-        return song.PublicationStatus ==
-                   PublicationStatus.Published &&
-               song.IsPublic &&
-               song.Performer.PublicationStatus ==
-                   PublicationStatus.Published;
+        return song.PublicationStatus == PublicationStatus.Published &&
+               song.Performer.PublicationStatus == PublicationStatus.Published;
     }
 
     // Comments visible to the current caller.
@@ -56,20 +53,14 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
             var id = userId.Value;
 
             return query.Where(c =>
-                (c.Song.PublicationStatus ==
-                    PublicationStatus.Published &&
-                 c.Song.IsPublic &&
-                 c.Song.Performer.PublicationStatus ==
-                    PublicationStatus.Published) ||
+                (c.Song.PublicationStatus == PublicationStatus.Published &&
+                 c.Song.Performer.PublicationStatus == PublicationStatus.Published) ||
                 c.Song.OwnerId == id);
         }
 
         return query.Where(c =>
-            c.Song.PublicationStatus ==
-                PublicationStatus.Published &&
-            c.Song.IsPublic &&
-            c.Song.Performer.PublicationStatus ==
-                PublicationStatus.Published);
+            c.Song.PublicationStatus == PublicationStatus.Published &&
+            c.Song.Performer.PublicationStatus == PublicationStatus.Published);
     }
 
     private CommentDto ToDto(Comment comment)

@@ -11,7 +11,5 @@ public class CreateAlbumDto
     [MaxLength(2000)]
     public string? Description { get; set; }
 
-    public bool IsPublic { get; set; }
-
     public List<int> SongIds { get; set; } = [];
 }

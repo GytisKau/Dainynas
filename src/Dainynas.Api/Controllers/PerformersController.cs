@@ -37,7 +37,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
 
         return User.IsModeratorOrAdmin() ||
             (song.PublicationStatus == PublicationStatus.Published &&
-             song.IsPublic) ||
+             song.Performer.PublicationStatus == PublicationStatus.Published) ||
             (userId.HasValue && song.OwnerId == userId.Value);
     }
 
@@ -495,9 +495,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         var hasPublicSongs = await _context.Songs
             .AnyAsync(s =>
                 s.PerformerId == id &&
-                s.PublicationStatus ==
-                    PublicationStatus.Published &&
-                s.IsPublic);
+                s.PublicationStatus == PublicationStatus.Published);
 
         if (hasPublicSongs)
         {
@@ -595,7 +593,6 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
                 Id = s.Id,
                 Title = s.Title,
                 RecordingYear = s.RecordingYear,
-                IsPublic = s.IsPublic
             })
             .ToListAsync();
 
@@ -678,7 +675,6 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
                 RecordingPlace = s.RecordingPlace,
                 ExternalArchiveUrl = s.ExternalArchiveUrl,
                 AudioUrl = s.AudioUrl,
-                IsPublic = s.IsPublic,
                 PublicationStatus = s.PublicationStatus,
                 PerformerId = s.PerformerId,
                 PerformerName = s.Performer.Name
@@ -711,6 +707,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
 
         var song = await _context.Songs
             .AsNoTracking()
+            .Include(s => s.Performer)
             .FirstOrDefaultAsync(s =>
                 s.Id == songId &&
                 s.PerformerId == performerId);
@@ -751,7 +748,7 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
 
         return query.Where(s =>
             (s.PublicationStatus == PublicationStatus.Published &&
-             s.IsPublic) ||
+             s.Performer.PublicationStatus == PublicationStatus.Published) ||
             (userId.HasValue && s.OwnerId == userId.Value));
     }
 }

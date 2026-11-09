@@ -33,9 +33,6 @@ namespace Dainynas.Api.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<bool>("IsPublic")
-                        .HasColumnType("boolean");
-
                     b.Property<int?>("OwnerId")
                         .HasColumnType("integer");
 
@@ -239,9 +236,6 @@ namespace Dainynas.Api.Migrations
 
                     b.Property<string>("ExternalArchiveUrl")
                         .HasColumnType("text");
-
-                    b.Property<bool>("IsPublic")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("Lyrics")
                         .HasColumnType("text");

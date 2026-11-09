@@ -28,13 +28,11 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
 
     private static bool IsSongPublic(Song song) =>
         song.PublicationStatus == PublicationStatus.Published &&
-        song.IsPublic &&
         song.Performer.PublicationStatus == PublicationStatus.Published;
 
     private bool CanRead(Album album) =>
         User.CanManage(album.OwnerId) ||
         (album.PublicationStatus == PublicationStatus.Published &&
-         album.IsPublic &&
          album.AlbumSongs.All(x => IsSongPublic(x.Song)));
 
     private bool CanUseSong(Song song, int userId) =>
@@ -53,10 +51,8 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
     private IQueryable<Album> PublicAlbumsQuery() =>
         AlbumsWithSongs().Where(a =>
             a.PublicationStatus == PublicationStatus.Published &&
-            a.IsPublic &&
             !a.AlbumSongs.Any(x =>
                 x.Song.PublicationStatus != PublicationStatus.Published ||
-                !x.Song.IsPublic ||
                 x.Song.Performer.PublicationStatus !=
                     PublicationStatus.Published));
 
@@ -69,7 +65,6 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             Id = album.Id,
             Title = album.Title,
             Description = album.Description,
-            IsPublic = album.IsPublic,
             PublicationStatus = album.PublicationStatus
         };
 
@@ -172,7 +167,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         if (requirePublished &&
             songs.Any(s => !IsSongPublic(s)))
         {
-            return "Public albums require published, public songs.";
+            return "Public albums require published";
         }
 
         return null;
@@ -337,7 +332,6 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
         {
             Title = dto.Title.Trim(),
             Description = dto.Description,
-            IsPublic = dto.IsPublic,
             OwnerId = userId.Value,
             PublicationStatus = PublicationStatus.Draft,
 
@@ -415,8 +409,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             ids,
             userId.Value,
             requirePublished:
-                album.PublicationStatus == PublicationStatus.Published
-                && dto.IsPublic);
+                album.PublicationStatus == PublicationStatus.Published);
 
         if (error is not null)
             return BadRequest(new { message = error });
@@ -429,7 +422,6 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
 
             album.Title = dto.Title;
             album.Description = dto.Description;
-            album.IsPublic = dto.IsPublic;
 
             ReplaceAlbumSongs(album, ids);
 
@@ -539,26 +531,17 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             });
         }
 
-        if (album.IsPublic)
-        {
-            var hasInvalidSongs = await _context.AlbumSongs
-                .Where(x => x.AlbumId == id)
-                .AnyAsync(x =>
-                    x.Song.PublicationStatus !=
-                        PublicationStatus.Published ||
-                    !x.Song.IsPublic ||
-                    x.Song.Performer.PublicationStatus !=
-                        PublicationStatus.Published);
+        var hasInvalidSongs = await _context.AlbumSongs
+            .Where(x => x.AlbumId == id)
+            .AnyAsync(x =>
+                x.Song.PublicationStatus != PublicationStatus.Published ||
+                x.Song.Performer.PublicationStatus !=
+                    PublicationStatus.Published);
 
-            if (hasInvalidSongs)
-            {
-                return Conflict(new
-                {
-                    message =
-                        "Publish all referenced songs before the album."
-                });
-            }
-        }
+        if (hasInvalidSongs)
+            return Conflict(new {
+                message = "Publish all referenced songs before the album."
+            });
 
         var hasPending = await _context.ModerationRequests
             .AnyAsync(r =>
@@ -662,7 +645,6 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             });
         }
 
-        album.IsPublic = false;
         album.PublicationStatus = PublicationStatus.Draft;
 
         await _context.SaveChangesAsync();

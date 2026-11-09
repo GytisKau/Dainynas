@@ -10,7 +10,5 @@ public class PerformerProfileSongDto
 
     public int? RecordingYear { get; set; }
 
-    public bool IsPublic { get; set; }
-
     public Dictionary<string, LinkDto> Links { get; set; } = [];
 }

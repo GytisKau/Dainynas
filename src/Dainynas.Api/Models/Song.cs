@@ -10,7 +10,6 @@ public class Song
     public string? RecordingPlace { get; set; }
     public string? ExternalArchiveUrl { get; set; }
     public string? AudioUrl { get; set; }
-    public bool IsPublic { get; set; }
 
     public int PerformerId { get; set; }
     public Performer Performer { get; set; } = null!;

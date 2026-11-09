@@ -77,7 +77,6 @@ public static class DatabaseSeeder
                     "https://irasai.archyvas.llti.lt/index.php?id=57226",
                 AudioUrl =
                     "https://irasai.archyvas.llti.lt/mp3/LTRF_pl_458/pl.458-01.mp3",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[0].Id
             },
@@ -93,7 +92,6 @@ public static class DatabaseSeeder
                     "https://etnomuzikologai.lmta.lt/item/44464",
                 AudioUrl =
                     "https://etnomuzikologai.lmta.lt/files/audio/KF_4551_007.mp3",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[0].Id
             },
@@ -109,7 +107,6 @@ public static class DatabaseSeeder
                     "https://etnomuzikologai.lmta.lt/item/44357",
                 AudioUrl =
                     "https://etnomuzikologai.lmta.lt/files/audio/KF_5016_009.mp3",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[0].Id
             },
@@ -121,7 +118,6 @@ public static class DatabaseSeeder
                     "Ant kalno mūrai, joja lietuviai...",
                 RecordingYear = 1968,
                 RecordingPlace = "Aukštadvaris, Trakų r.",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[1].Id
             },
@@ -133,7 +129,6 @@ public static class DatabaseSeeder
                     "Aš pasėjau žalią rūtą...",
                 RecordingYear = 1971,
                 RecordingPlace = "Merkinė, Varėnos r.",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[2].Id
             },
@@ -145,7 +140,6 @@ public static class DatabaseSeeder
                     "Vai tu rugeli, žalias rugeli...",
                 RecordingYear = 1969,
                 RecordingPlace = "Rumšiškės, Kaišiadorių r.",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[3].Id
             },
@@ -157,7 +151,6 @@ public static class DatabaseSeeder
                     "Augo girioj ąžuolėlis...",
                 RecordingYear = 1973,
                 RecordingPlace = "Dusetos, Zarasų r.",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 PerformerId = performers[4].Id
             }
@@ -173,7 +166,6 @@ public static class DatabaseSeeder
                 Title = "Kaišiadorių dainos",
                 Description =
                     "Kaišiadorių krašto folklorinių dainų rinkinys.",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 AlbumSongs = new List<AlbumSong>
                 {
@@ -189,7 +181,6 @@ public static class DatabaseSeeder
                 Title = "Dzūkijos dainos",
                 Description =
                     "Dzūkijos regiono tradicinių dainų rinkinys.",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 AlbumSongs = new List<AlbumSong>
                 {
@@ -202,7 +193,6 @@ public static class DatabaseSeeder
             {
                 Title = "Lietuvių liaudies dainų rinktinė",
                 Description = "Įvairių Lietuvos regionų folklorinių dainų rinktinė.",
-                IsPublic = true,
                 PublicationStatus = PublicationStatus.Published,
                 AlbumSongs = new List<AlbumSong>
                 {
