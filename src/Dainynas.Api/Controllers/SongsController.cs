@@ -89,8 +89,7 @@ public class SongsController(DainynasDbContext context) : ControllerBase
 
         if (User.CanManage(song.OwnerId))
         {
-            if (song.PublicationStatus !=
-                PublicationStatus.Pending)
+            if (song.PublicationStatus != PublicationStatus.Pending)
             {
                 dto.Links["update"] = new LinkDto
                 {
@@ -99,8 +98,7 @@ public class SongsController(DainynasDbContext context) : ControllerBase
                 };
             }
 
-            if (song.PublicationStatus ==
-                PublicationStatus.Draft)
+            if (song.PublicationStatus == PublicationStatus.Draft)
             {
                 dto.Links["submit"] = new LinkDto
                 {
@@ -112,6 +110,15 @@ public class SongsController(DainynasDbContext context) : ControllerBase
                 {
                     Href = $"/api/songs/{song.Id}",
                     Method = "DELETE"
+                };
+            }
+
+            if (song.PublicationStatus == PublicationStatus.Published)
+            {
+                dto.Links["unpublish"] = new LinkDto
+                {
+                    Href = $"/api/songs/{song.Id}/unpublish",
+                    Method = "POST"
                 };
             }
         }
@@ -602,6 +609,70 @@ public class SongsController(DainynasDbContext context) : ControllerBase
             status = request.Status,
             message = "Song submitted for publication."
         });
+    }
+    
+    [Authorize]
+    [HttpPost("{id:int}/unpublish")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Unpublish(int id)
+    {
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        var song = await _context.Songs
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Songs"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
+
+        if (song is null)
+            return NotFound();
+
+        if (!User.CanManage(song.OwnerId))
+            return Forbid();
+
+        if (song.PublicationStatus != PublicationStatus.Published)
+            return Conflict(new
+            {
+                message = "Only published songs can be unpublished."
+            });
+
+        var hasPending = await _context.ModerationRequests
+            .AnyAsync(r =>
+                r.EntityType == ModerationEntityTypes.Song &&
+                r.EntityId == id &&
+                r.Status == ModerationStatuses.Pending);
+
+        if (hasPending)
+            return Conflict(new {
+                message = "Resolve the pending moderation request first."
+            });
+
+        var belongsToPublicAlbum = await _context.AlbumSongs
+            .AnyAsync(x =>
+                x.SongId == id &&
+                x.Album.PublicationStatus ==
+                    PublicationStatus.Published &&
+                x.Album.IsPublic);
+
+        if (belongsToPublicAlbum)
+            return Conflict(new {
+                message = "Cannot unpublish a song used by a public album."
+            });
+
+        song.IsPublic = false;
+        song.PublicationStatus = PublicationStatus.Draft;
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return NoContent();
     }
 
     // --------------------------------------------------

@@ -129,6 +129,15 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
                     Method = "DELETE"
                 };
             }
+
+            if (album.PublicationStatus == PublicationStatus.Published)
+            {
+                dto.Links["unpublish"] = new LinkDto
+                {
+                    Href = $"/api/albums/{album.Id}/unpublish",
+                    Method = "POST"
+                };
+            }
         }
 
         return dto;
@@ -602,6 +611,64 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             status = request.Status,
             message = "Album submitted for publication."
         });
+    }
+    
+    [Authorize]
+    [HttpPost("{id:int}/unpublish")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Unpublish(int id)
+    {
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        var album = await _context.Albums
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Albums"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
+
+        if (album is null)
+            return NotFound();
+
+        if (!User.CanManage(album.OwnerId))
+            return Forbid();
+
+        if (album.PublicationStatus != PublicationStatus.Published)
+        {
+            return Conflict(new
+            {
+                message = "Only published albums can be unpublished."
+            });
+        }
+
+        var hasPending = await _context.ModerationRequests
+            .AnyAsync(r =>
+                r.EntityType == ModerationEntityTypes.Album &&
+                r.EntityId == id &&
+                r.Status == ModerationStatuses.Pending);
+
+        if (hasPending)
+        {
+            return Conflict(new
+            {
+                message =
+                    "Resolve the pending moderation request first."
+            });
+        }
+
+        album.IsPublic = false;
+        album.PublicationStatus = PublicationStatus.Draft;
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return NoContent();
     }
 
     // ---------------- DELETE ----------------

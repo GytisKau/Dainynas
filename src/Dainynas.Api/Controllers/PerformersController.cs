@@ -93,6 +93,15 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
                     Method = "DELETE"
                 };
             }
+
+            if (performer.PublicationStatus == PublicationStatus.Published)
+            {
+                dto.Links["unpublish"] = new LinkDto
+                {
+                    Href = $"/api/performers/{performer.Id}/unpublish",
+                    Method = "POST"
+                };
+            }
         }
 
         return dto;
@@ -432,6 +441,81 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             message = "Performer submitted for publication."
         });
     }
+    
+    [Authorize]
+    [HttpPost("{id:int}/unpublish")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Unpublish(int id)
+    {
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        var performer = await _context.Performers
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Performers"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
+
+        if (performer is null)
+            return NotFound();
+
+        if (!User.CanManage(performer.OwnerId))
+            return Forbid();
+
+        if (performer.PublicationStatus !=
+            PublicationStatus.Published)
+        {
+            return Conflict(new
+            {
+                message = "Only published performers can be unpublished."
+            });
+        }
+
+        var hasPending = await _context.ModerationRequests
+            .AnyAsync(r =>
+                r.EntityType == ModerationEntityTypes.Performer &&
+                r.EntityId == id &&
+                r.Status == ModerationStatuses.Pending);
+
+        if (hasPending)
+        {
+            return Conflict(new
+            {
+                message =
+                    "Resolve the pending moderation request first."
+            });
+        }
+
+        var hasPublicSongs = await _context.Songs
+            .AnyAsync(s =>
+                s.PerformerId == id &&
+                s.PublicationStatus ==
+                    PublicationStatus.Published &&
+                s.IsPublic);
+
+        if (hasPublicSongs)
+        {
+            return Conflict(new
+            {
+                message =
+                    "Cannot unpublish a performer with public songs."
+            });
+        }
+
+        performer.PublicationStatus = PublicationStatus.Draft;
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return NoContent();
+    }
+
 
     // DELETE /api/performers/{id}
     // Only a draft without dependencies/history can be deleted.
