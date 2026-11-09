@@ -1,0 +1,22 @@
+info:
+  name: Old refresh token rejected
+  type: http
+  seq: 3
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/refresh'
+  body:
+    type: json
+    data: |-
+      {"refreshToken":"{{oldFlowRefresh}}"}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 401", function () { expect(res.status).to.equal(401); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

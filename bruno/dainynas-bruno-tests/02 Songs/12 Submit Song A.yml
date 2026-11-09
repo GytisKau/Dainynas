@@ -1,0 +1,24 @@
+info:
+  name: Submit Song A
+  type: http
+  seq: 12
+http:
+  method: POST
+  url: '{{baseUrl}}/api/songs/{{songAId}}/submit'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 202 && res.body?.requestId != null) bru.setVar("songAPublishRequestId", res.body.requestId);
+  - type: tests
+    code: |-
+      test("HTTP 202", function () { expect(res.status).to.equal(202); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

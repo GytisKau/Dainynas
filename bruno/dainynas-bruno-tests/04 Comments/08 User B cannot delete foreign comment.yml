@@ -1,0 +1,21 @@
+info:
+  name: User B cannot delete foreign comment
+  type: http
+  seq: 8
+http:
+  method: DELETE
+  url: '{{baseUrl}}/api/comments/{{commentAId}}'
+  auth:
+    type: bearer
+    token: '{{userBToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 403", function () { expect(res.status).to.equal(403); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

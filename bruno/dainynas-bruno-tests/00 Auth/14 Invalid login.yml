@@ -1,0 +1,22 @@
+info:
+  name: Invalid login
+  type: http
+  seq: 14
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {"email":"{{userAEmail}}","password":"not-the-real-password"}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 401", function () { expect(res.status).to.equal(401); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

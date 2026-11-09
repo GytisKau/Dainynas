@@ -1,0 +1,7 @@
+info:
+  name: 06 Refresh Logout
+  type: folder
+  seq: 7
+docs:
+  content: Refresh rotacija, sesijų atšaukimas
+  type: text/markdown

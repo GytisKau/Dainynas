@@ -1,0 +1,28 @@
+info:
+  name: Submit valid published update
+  type: http
+  seq: 25
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/performers/{{performerAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"name":"{{runTag}} Performer A FINAL","birthYear":1903,"residence":"Vilnius","photoUrl":null}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 202 && res.body?.requestId != null) bru.setVar("performerUpdateRequestId", res.body.requestId);
+  - type: tests
+    code: |-
+      test("HTTP 202", function () { expect(res.status).to.equal(202); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

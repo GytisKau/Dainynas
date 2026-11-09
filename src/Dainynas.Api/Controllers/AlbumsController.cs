@@ -228,7 +228,7 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(title))
             query = query.Where(a =>
-                a.Title.Contains(title.Trim(), StringComparison.CurrentCultureIgnoreCase));
+                EF.Functions.ILike(a.Title, $"%{title.Trim()}%"));
 
         var result = await PaginationHelper.PaginateAsync(
             query.OrderBy(a => a.Id),

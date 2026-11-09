@@ -1,0 +1,22 @@
+info:
+  name: Moderator me
+  type: http
+  seq: 8
+http:
+  method: GET
+  url: '{{baseUrl}}/api/auth/me'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("Moderator identity", () => expect(res.body.role).to.equal("Moderator"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

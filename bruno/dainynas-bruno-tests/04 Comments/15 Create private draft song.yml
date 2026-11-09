@@ -1,0 +1,28 @@
+info:
+  name: Create private draft song
+  type: http
+  seq: 15
+http:
+  method: POST
+  url: '{{baseUrl}}/api/songs'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"{{runTag}} Private Draft","lyrics":"Privatus tekstas","recordingYear":1965,"recordingPlace":"Vilnius","externalArchiveUrl":null,"audioUrl":null,"isPublic":false,"performerId":{{performerAId}}}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 201 && res.body?.id != null) bru.setVar("privateSongId", res.body.id);
+  - type: tests
+    code: |-
+      test("HTTP 201", function () { expect(res.status).to.equal(201); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

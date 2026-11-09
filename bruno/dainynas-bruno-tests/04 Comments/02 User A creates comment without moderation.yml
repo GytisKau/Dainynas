@@ -1,0 +1,34 @@
+info:
+  name: User A creates comment without moderation
+  type: http
+  seq: 2
+http:
+  method: POST
+  url: '{{baseUrl}}/api/comments'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"text":"{{runTag}} komentaras apie paskelbtą dainą.","authorName":"BrunoTester","songId":{{songAId}}}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 201 && res.body?.id != null) bru.setVar("commentAId", res.body.id);
+  - type: tests
+    code: |-
+      test("HTTP 201", function () { expect(res.status).to.equal(201); });
+       test("Comment available immediately", () => {
+         expect(res.body.text).to.contain("komentaras");
+         expect(res.body.links.self.href).to.equal("/api/comments/" + res.body.id);
+         expect(res.body.links.song.href).to.equal("/api/songs/" + bru.getVar("songAId"));
+         expect(res.body.links.update.method).to.equal("PUT");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

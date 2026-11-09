@@ -1,0 +1,18 @@
+info:
+  name: Deleted album is missing
+  type: http
+  seq: 23
+http:
+  method: GET
+  url: '{{baseUrl}}/api/albums/{{temporaryAlbumId}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 404", function () { expect(res.status).to.equal(404); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

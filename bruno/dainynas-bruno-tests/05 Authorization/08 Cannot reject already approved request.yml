@@ -1,0 +1,25 @@
+info:
+  name: Cannot reject already approved request
+  type: http
+  seq: 8
+http:
+  method: POST
+  url: '{{baseUrl}}/api/moderation/requests/{{songAUpdateRequestId}}/reject'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+  body:
+    type: json
+    data: |-
+      {"reason":"Ši užklausa jau patvirtinta"}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 409", function () { expect(res.status).to.equal(409); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

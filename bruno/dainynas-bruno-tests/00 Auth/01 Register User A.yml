@@ -1,0 +1,41 @@
+info:
+  name: Register User A
+  type: http
+  seq: 1
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/register'
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{userAEmail}}",
+        "password": "{{userPassword}}"
+      }
+runtime:
+  scripts:
+  - type: before-request
+    code: |-
+      const id = Date.now().toString() + Math.floor(Math.random() * 100000).toString();
+      bru.setVar("runTag", "BRU-" + id);
+      bru.setVar("userAEmail", "bruno.a." + id + "@example.test");
+      bru.setVar("userBEmail", "bruno.b." + id + "@example.test");
+      bru.setVar("userPassword", "Tst!" + id + "xX");
+  - type: after-response
+    code: |-
+      if (res.status === 201) bru.setVar("userAToken", res.body.token);
+  - type: tests
+    code: |-
+      test("HTTP 201", function () { expect(res.status).to.equal(201); });test("User role and tokens", function () {
+        expect(res.body.role).to.equal("User");
+        expect(res.body.token).to.be.a("string").and.not.empty;
+        expect(res.body.refreshToken).to.be.a("string").and.not.empty;
+        expect(res.body.expiresAt).to.be.a("string");
+        expect(res.body.refreshExpiresAt).to.be.a("string");
+      });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

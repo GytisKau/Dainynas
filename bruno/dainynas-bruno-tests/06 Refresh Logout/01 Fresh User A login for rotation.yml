@@ -1,0 +1,43 @@
+info:
+  name: Fresh User A login for rotation
+  type: http
+  seq: 1
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {"email":"{{userAEmail}}","password":"{{userPassword}}"}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 200) { bru.setVar("flowAccess", res.body.token); bru.setVar("flowRefresh", res.body.refreshToken); }
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("JWT embeds UserId role and session", () => {
+         const token = res.body.token;
+         const raw = token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+         let bits = 0, value = 0, result = "";
+         for (const ch of raw.replace(/=+$/, "")) {
+           value = (value << 6) | chars.indexOf(ch);
+           bits += 6;
+           if (bits >= 8) { bits -= 8; result += String.fromCharCode((value >> bits) & 255); }
+         }
+         const data = JSON.parse(result);
+         const role = data.role ?? data["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+         const id = data.nameid ?? data.sub ?? data["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+         expect(role).to.equal("User");
+         expect(Number(id)).to.be.greaterThan(0);
+         expect(data.session_id).to.be.a("string").and.not.empty;
+         expect(data.exp - data.nbf).to.be.at.most(600);
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

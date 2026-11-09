@@ -1,0 +1,30 @@
+info:
+  name: Login User A
+  type: http
+  seq: 2
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {"email":"{{userAEmail}}","password":"{{userPassword}}"}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 200) { bru.setVar("userAToken", res.body.token); bru.setVar("userARefresh", res.body.refreshToken); }
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Token pair and User role", function () {
+         expect(res.body.role).to.equal("User");
+         expect(res.body.token).to.be.a("string").and.not.empty;
+         expect(res.body.refreshToken).to.be.a("string").and.not.empty;
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

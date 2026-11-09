@@ -1,0 +1,21 @@
+info:
+  name: Moderator publishes Song B
+  type: http
+  seq: 18
+http:
+  method: POST
+  url: '{{baseUrl}}/api/moderation/requests/{{songBPublishRequestId}}/approve'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

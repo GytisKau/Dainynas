@@ -1,0 +1,24 @@
+info:
+  name: Public songs filtered
+  type: http
+  seq: 19
+http:
+  method: GET
+  url: '{{baseUrl}}/api/songs?title={{runTag}}&performerId={{performerAId}}&page=1&pageSize=10'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Filter and pagination", () => {
+         expect(res.body.pageSize).to.equal(10);
+         expect(res.body.items.some(x => x.id === Number(bru.getVar("songAId")))).to.equal(true);
+         expect(res.body.items.some(x => x.id === Number(bru.getVar("songBId")))).to.equal(true);
+         expect(res.body.items.every(x => x.performerId === Number(bru.getVar("performerAId")))).to.equal(true);
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

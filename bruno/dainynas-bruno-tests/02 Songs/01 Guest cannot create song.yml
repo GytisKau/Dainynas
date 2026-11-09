@@ -1,0 +1,22 @@
+info:
+  name: Guest cannot create song
+  type: http
+  seq: 1
+http:
+  method: POST
+  url: '{{baseUrl}}/api/songs'
+  body:
+    type: json
+    data: |-
+      {"title":"Forbidden","isPublic":true,"performerId":{{performerAId}}}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 401", function () { expect(res.status).to.equal(401); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

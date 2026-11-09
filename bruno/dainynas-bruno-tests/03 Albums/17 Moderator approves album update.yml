@@ -1,0 +1,21 @@
+info:
+  name: Moderator approves album update
+  type: http
+  seq: 17
+http:
+  method: POST
+  url: '{{baseUrl}}/api/moderation/requests/{{albumUpdateRequestId}}/approve'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,23 @@
+info:
+  name: Filter and paginate comments
+  type: http
+  seq: 4
+http:
+  method: GET
+  url: '{{baseUrl}}/api/comments?authorName=BrunoTester&text={{runTag}}&songId={{songAId}}&page=1&pageSize=5'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Comment filtering works", () => {
+         expect(res.body.pageSize).to.equal(5);
+         expect(res.body.items.some(x => x.id === Number(bru.getVar("commentAId")))).to.equal(true);
+         expect(res.body.items.every(x => x.songId === Number(bru.getVar("songAId")))).to.equal(true);
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

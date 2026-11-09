@@ -1,0 +1,28 @@
+info:
+  name: Create album with unpublished song
+  type: http
+  seq: 25
+http:
+  method: POST
+  url: '{{baseUrl}}/api/albums'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"{{runTag}} Unpublished Album","description":"Negalima publikuoti","isPublic":true,"songIds":[{{albumDependencySongId}}]}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 201 && res.body?.id != null) bru.setVar("albumDependencyId", res.body.id);
+  - type: tests
+    code: |-
+      test("HTTP 201", function () { expect(res.status).to.equal(201); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

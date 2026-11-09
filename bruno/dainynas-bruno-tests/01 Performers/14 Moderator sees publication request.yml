@@ -1,0 +1,26 @@
+info:
+  name: Moderator sees publication request
+  type: http
+  seq: 14
+http:
+  method: GET
+  url: '{{baseUrl}}/api/moderation/requests/{{performerPublishRequestId}}'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Pending Publish Performer", () => {
+         expect(res.body.entityType).to.equal("Performer");
+         expect(res.body.requestType).to.equal("Publish");
+         expect(res.body.status).to.equal("Pending");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

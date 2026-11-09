@@ -1,0 +1,28 @@
+info:
+  name: Moderator reviews approved request
+  type: http
+  seq: 5
+http:
+  method: GET
+  url: '{{baseUrl}}/api/moderation/requests/{{songAUpdateRequestId}}'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Approved update audit trail", () => {
+         expect(res.body.requestType).to.equal("Update");
+         expect(res.body.entityType).to.equal("Song");
+         expect(res.body.status).to.equal("Approved");
+         expect(res.body.reviewedAt).to.be.a("string");
+         expect(res.body.proposedData).to.be.an("object");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

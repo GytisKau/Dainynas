@@ -1,0 +1,21 @@
+info:
+  name: Logout current session
+  type: http
+  seq: 6
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/logout'
+  auth:
+    type: bearer
+    token: '{{flowAccess}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

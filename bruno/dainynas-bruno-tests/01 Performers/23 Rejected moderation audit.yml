@@ -1,0 +1,26 @@
+info:
+  name: Rejected moderation audit
+  type: http
+  seq: 23
+http:
+  method: GET
+  url: '{{baseUrl}}/api/moderation/requests/{{performerRejectRequestId}}'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Rejection is recorded", () => {
+         expect(res.body.status).to.equal("Rejected");
+         expect(res.body.rejectionReason).to.be.a("string").and.not.empty;
+         expect(res.body.reviewedByUserId).to.be.a("number");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

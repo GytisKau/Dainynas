@@ -7,11 +7,8 @@ variables:
   - name: moderatorEmail
     value: moderator@dainynas.lt
   - secret: true
-    name: testPassword
-    description: ""
-  - secret: true
     name: adminPassword
-    description: ""
+    description: Įvesk į Bruno Local aplinką; nekeisk faile
   - secret: true
     name: moderatorPassword
-    description: ""
+    description: Įvesk į Bruno Local aplinką; nekeisk faile

@@ -1,0 +1,29 @@
+info:
+  name: Create song for unpublished performer
+  type: http
+  seq: 3
+http:
+  method: POST
+  url: '{{baseUrl}}/api/songs'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"{{runTag}} Dependency Song","lyrics":"Priklausomybės tikrinimas.","recordingYear":1966,"recordingPlace":"Vilnius","externalArchiveUrl":null,"audioUrl":null,"isPublic":true,"performerId":{{dependencyPerformerId}}}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 201 && res.body?.id != null) bru.setVar("dependencySongId", res.body.id);
+  - type: tests
+    code: |-
+      test("HTTP 201", function () { expect(res.status).to.equal(201); });
+      test("Draft state", () => expect(res.body.publicationStatus).to.equal("Draft"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,7 +1,7 @@
 opencollection: 1.0.0
 
 info:
-  name: Dainynas API Tests
+  name: Dainynas API - Moderation and Security Tests
 config:
   proxy:
     inherit: true
@@ -13,14 +13,5 @@ config:
         username: ""
         password: ""
       bypassProxy: ""
-
-request:
-  auth:
-    type: bearer
-    token: "{{accessToken}}"
 bundled: false
-extensions:
-  bruno:
-    ignore:
-      - node_modules
-      - .git
+extensions: {}

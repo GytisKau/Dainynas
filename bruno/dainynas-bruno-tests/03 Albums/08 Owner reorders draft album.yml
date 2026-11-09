@@ -1,0 +1,25 @@
+info:
+  name: Owner reorders draft album
+  type: http
+  seq: 8
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/albums/{{albumAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"{{runTag}} Album DRAFT","description":"Nauja tvarka juodraštyje","isPublic":true,"songIds":[{{songBId}},{{songAId}}]}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

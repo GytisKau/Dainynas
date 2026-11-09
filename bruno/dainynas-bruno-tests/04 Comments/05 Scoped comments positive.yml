@@ -1,0 +1,22 @@
+info:
+  name: Scoped comments positive
+  type: http
+  seq: 5
+http:
+  method: GET
+  url: '{{baseUrl}}/api/performers/{{performerAId}}/songs/{{songAId}}/comments'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Three-level hierarchy", () => {
+         expect(res.body).to.be.an("array");
+         expect(res.body.some(x => x.id === Number(bru.getVar("commentAId")))).to.equal(true);
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

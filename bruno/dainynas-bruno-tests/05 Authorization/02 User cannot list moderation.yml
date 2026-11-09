@@ -1,0 +1,21 @@
+info:
+  name: User cannot list moderation
+  type: http
+  seq: 2
+http:
+  method: GET
+  url: '{{baseUrl}}/api/moderation/requests'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 403", function () { expect(res.status).to.equal(403); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

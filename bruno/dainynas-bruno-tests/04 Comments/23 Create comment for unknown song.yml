@@ -1,0 +1,25 @@
+info:
+  name: Create comment for unknown song
+  type: http
+  seq: 23
+http:
+  method: POST
+  url: '{{baseUrl}}/api/comments'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"text":"Unknown song","authorName":"BrunoTester","songId":99999999}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 404", function () { expect(res.status).to.equal(404); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

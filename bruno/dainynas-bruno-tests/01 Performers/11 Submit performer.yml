@@ -1,0 +1,25 @@
+info:
+  name: Submit performer
+  type: http
+  seq: 11
+http:
+  method: POST
+  url: '{{baseUrl}}/api/performers/{{performerAId}}/submit'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 202 && res.body?.requestId != null) bru.setVar("performerPublishRequestId", res.body.requestId);
+  - type: tests
+    code: |-
+      test("HTTP 202", function () { expect(res.status).to.equal(202); });
+      test("Moderation request id", () => expect(res.body.requestId).to.be.a("number"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

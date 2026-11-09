@@ -1,0 +1,26 @@
+info:
+  name: Owner reads draft
+  type: http
+  seq: 4
+http:
+  method: GET
+  url: '{{baseUrl}}/api/performers/{{performerAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Draft links available for owner", () => {
+         expect(res.body.publicationStatus).to.equal("Draft");
+         expect(res.body.links.update.method).to.equal("PUT");
+         expect(res.body.links.delete.method).to.equal("DELETE");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

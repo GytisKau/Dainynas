@@ -1,0 +1,33 @@
+info:
+  name: Create Song A
+  type: http
+  seq: 7
+http:
+  method: POST
+  url: '{{baseUrl}}/api/songs'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"{{runTag}} Song A","lyrics":"Bandomasis folkloro dainos tekstas.","recordingYear":1965,"recordingPlace":"Kaišiadorys","externalArchiveUrl":null,"audioUrl":null,"isPublic":true,"performerId":{{performerAId}}}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 201 && res.body?.id != null) bru.setVar("songAId", res.body.id);
+  - type: tests
+    code: |-
+      test("HTTP 201", function () { expect(res.status).to.equal(201); });
+       test("Draft and links", () => {
+         expect(res.body.publicationStatus).to.equal("Draft");
+         expect(res.body.links.comments.href).to.equal("/api/performers/" + bru.getVar("performerAId") + "/songs/" + res.body.id + "/comments");
+         expect(res.body.links.submit.method).to.equal("POST");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

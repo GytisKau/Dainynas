@@ -1,0 +1,25 @@
+info:
+  name: Unknown song invalid
+  type: http
+  seq: 3
+http:
+  method: POST
+  url: '{{baseUrl}}/api/albums'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"Unknown ID","description":"Invalid","isPublic":true,"songIds":[99999999]}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 400", function () { expect(res.status).to.equal(400); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

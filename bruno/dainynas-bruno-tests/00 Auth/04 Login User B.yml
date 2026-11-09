@@ -1,0 +1,26 @@
+info:
+  name: Login User B
+  type: http
+  seq: 4
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {"email":"{{userBEmail}}","password":"{{userPassword}}"}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 200) bru.setVar("userBToken", res.body.token);
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("Role is User", () => expect(res.body.role).to.equal("User"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

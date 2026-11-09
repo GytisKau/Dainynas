@@ -1,0 +1,7 @@
+info:
+  name: 05 Authorization
+  type: folder
+  seq: 6
+docs:
+  content: Moderavimo prieigos ribojimai ir API
+  type: text/markdown

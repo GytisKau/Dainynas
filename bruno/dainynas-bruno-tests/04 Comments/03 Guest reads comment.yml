@@ -1,0 +1,23 @@
+info:
+  name: Guest reads comment
+  type: http
+  seq: 3
+http:
+  method: GET
+  url: '{{baseUrl}}/api/comments/{{commentAId}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Public comment has read links only", () => {
+         expect(res.body.id).to.equal(Number(bru.getVar("commentAId")));
+         expect(res.body.links.self.href).to.equal("/api/comments/" + bru.getVar("commentAId"));
+         expect(res.body.links).not.to.have.property("delete");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

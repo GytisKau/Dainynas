@@ -1,0 +1,25 @@
+info:
+  name: Cannot move comment to another song
+  type: http
+  seq: 12
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/comments/{{commentAId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+  body:
+    type: json
+    data: |-
+      {"text":"Perkėlimas neturi pavykti","authorName":"BrunoTester","songId":{{songBId}}}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 400", function () { expect(res.status).to.equal(400); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

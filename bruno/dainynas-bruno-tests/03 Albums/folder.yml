@@ -1,0 +1,7 @@
+info:
+  name: 03 Albums
+  type: folder
+  seq: 4
+docs:
+  content: Albumai, dainų tvarka, moderavimas
+  type: text/markdown

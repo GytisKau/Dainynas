@@ -1,0 +1,35 @@
+info:
+  name: Rotate refresh token
+  type: http
+  seq: 2
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/refresh'
+  body:
+    type: json
+    data: |-
+      {"refreshToken":"{{flowRefresh}}"}
+runtime:
+  scripts:
+  - type: before-request
+    code: |-
+      bru.setVar("oldFlowAccess", bru.getVar("flowAccess")); bru.setVar("oldFlowRefresh", bru.getVar("flowRefresh"));
+  - type: after-response
+    code: |-
+      if (res.status === 200) { bru.setVar("flowAccess", res.body.token); bru.setVar("flowRefresh", res.body.refreshToken); }
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Returns new token pair", () => {
+         expect(res.body.token).to.be.a("string").and.not.empty;
+         expect(res.body.refreshToken).to.be.a("string").and.not.empty;
+         expect(res.body.role).to.equal("User");
+         expect(res.body.token).not.to.equal(bru.getVar("oldFlowAccess"));
+         expect(res.body.refreshToken).not.to.equal(bru.getVar("oldFlowRefresh"));
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

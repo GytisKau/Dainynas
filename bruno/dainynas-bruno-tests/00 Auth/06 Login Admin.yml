@@ -1,0 +1,26 @@
+info:
+  name: Login Admin
+  type: http
+  seq: 6
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {"email":"{{adminEmail}}","password":"{{adminPassword}}"}
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 200) bru.setVar("adminToken", res.body.token);
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("Admin role", () => expect(res.body.role).to.equal("Admin"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

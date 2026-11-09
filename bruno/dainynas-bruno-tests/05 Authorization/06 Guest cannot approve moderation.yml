@@ -1,0 +1,18 @@
+info:
+  name: Guest cannot approve moderation
+  type: http
+  seq: 6
+http:
+  method: POST
+  url: '{{baseUrl}}/api/moderation/requests/{{songAUpdateRequestId}}/approve'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 401", function () { expect(res.status).to.equal(401); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

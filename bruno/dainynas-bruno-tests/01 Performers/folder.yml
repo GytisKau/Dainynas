@@ -1,0 +1,7 @@
+info:
+  name: 01 Performers
+  type: folder
+  seq: 2
+docs:
+  content: Atlikėjo juodraštis, moderavimas, nuosavybė
+  type: text/markdown

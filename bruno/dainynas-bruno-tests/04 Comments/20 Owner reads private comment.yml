@@ -1,0 +1,22 @@
+info:
+  name: Owner reads private comment
+  type: http
+  seq: 20
+http:
+  method: GET
+  url: '{{baseUrl}}/api/comments/{{privateCommentId}}'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("Owner sees private comment", () => expect(res.body.songId).to.equal(Number(bru.getVar("privateSongId"))));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

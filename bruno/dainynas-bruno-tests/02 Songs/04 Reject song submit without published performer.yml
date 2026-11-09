@@ -1,0 +1,21 @@
+info:
+  name: Reject song submit without published performer
+  type: http
+  seq: 4
+http:
+  method: POST
+  url: '{{baseUrl}}/api/songs/{{dependencySongId}}/submit'
+  auth:
+    type: bearer
+    token: '{{userAToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 409", function () { expect(res.status).to.equal(409); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

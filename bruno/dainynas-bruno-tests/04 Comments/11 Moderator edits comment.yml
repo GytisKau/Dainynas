@@ -1,0 +1,25 @@
+info:
+  name: Moderator edits comment
+  type: http
+  seq: 11
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/comments/{{commentAId}}'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+  body:
+    type: json
+    data: |-
+      {"text":"{{runTag}} moderatoriaus pataisytas komentaras.","authorName":"Moderator","songId":{{songAId}}}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", function () { expect(res.status).to.equal(204); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

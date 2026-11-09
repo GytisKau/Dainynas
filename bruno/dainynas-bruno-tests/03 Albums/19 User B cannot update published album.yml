@@ -1,0 +1,25 @@
+info:
+  name: User B cannot update published album
+  type: http
+  seq: 19
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/albums/{{albumAId}}'
+  auth:
+    type: bearer
+    token: '{{userBToken}}'
+  body:
+    type: json
+    data: |-
+      {"title":"STOLEN","description":"","isPublic":true,"songIds":[{{songAId}}]}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 403", function () { expect(res.status).to.equal(403); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

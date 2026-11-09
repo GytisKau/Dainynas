@@ -1,0 +1,22 @@
+info:
+  name: Register validation
+  type: http
+  seq: 13
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/register'
+  body:
+    type: json
+    data: |-
+      {"email":"not-an-email","password":"123"}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 400", function () { expect(res.status).to.equal(400); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

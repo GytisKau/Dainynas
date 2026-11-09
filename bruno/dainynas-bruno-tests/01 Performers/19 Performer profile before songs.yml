@@ -1,0 +1,23 @@
+info:
+  name: Performer profile before songs
+  type: http
+  seq: 19
+http:
+  method: GET
+  url: '{{baseUrl}}/api/performers/{{performerAId}}/profile'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+       test("Composite profile and links", () => {
+         expect(res.body.songs).to.be.an("array").with.length(0);
+         expect(res.body.songCount).to.equal(0);
+         expect(res.body.links.self.href).to.equal("/api/performers/" + bru.getVar("performerAId") + "/profile");
+       });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,25 @@
+info:
+  name: User B cannot comment foreign draft
+  type: http
+  seq: 19
+http:
+  method: POST
+  url: '{{baseUrl}}/api/comments'
+  auth:
+    type: bearer
+    token: '{{userBToken}}'
+  body:
+    type: json
+    data: |-
+      {"text":"No access","authorName":"User B","songId":{{privateSongId}}}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 404", function () { expect(res.status).to.equal(404); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

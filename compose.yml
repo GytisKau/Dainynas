@@ -27,9 +27,9 @@ services:
       ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=dainynas;Username=dainynas;Password=dainynas
       UseKeyVault: "false"
-      Jwt__Key: "local-docker-jwt-key-which-should-be-long-enough-for-testing"
-      Admin__Email: "admin@dainynas.lt"
-      Admin__Password: "LabaiSlaptasAdmin123!"
+      Jwt__Key: ${JWT_KEY:?JWT_KEY is required}
+      Admin__Email: ${ADMIN_EMAIL:?Admin email is required}
+      Admin__Password: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
       Moderator__Email: ${MODERATOR_EMAIL:?Moderator email is required}
       Moderator__Password: ${MODERATOR_PASSWORD:?Moderator password is required}
       Jwt__Issuer: "Dainynas.Api"

@@ -139,16 +139,14 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
         var query = VisibleCommentsQuery();
 
         if (!string.IsNullOrWhiteSpace(text))
-        {
             query = query.Where(c =>
-                c.Text.Contains(text.Trim(), StringComparison.CurrentCultureIgnoreCase));
-        }
+                EF.Functions.ILike(c.Text, $"%{text.Trim()}%"));
 
         if (!string.IsNullOrWhiteSpace(authorName))
             query = query.Where(c =>
                 c.AuthorName != null &&
-                c.AuthorName.Contains(authorName.Trim(), StringComparison.CurrentCultureIgnoreCase));
-
+                EF.Functions.ILike(c.AuthorName, $"%{authorName.Trim()}%"));
+                
         if (songId.HasValue)
             query = query.Where(c =>
                 c.SongId == songId.Value);

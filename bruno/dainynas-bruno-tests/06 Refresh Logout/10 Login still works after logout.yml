@@ -1,0 +1,23 @@
+info:
+  name: Login still works after logout
+  type: http
+  seq: 10
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {"email":"{{userAEmail}}","password":"{{userPassword}}"}
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("User can create a new session", () => expect(res.body.token).to.be.a("string").and.not.empty);
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

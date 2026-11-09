@@ -1,0 +1,19 @@
+info:
+  name: Public Song A final version
+  type: http
+  seq: 26
+http:
+  method: GET
+  url: '{{baseUrl}}/api/songs/{{songAId}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", function () { expect(res.status).to.equal(200); });
+      test("Updated content visible", () => expect(res.body.title).to.equal(bru.getVar("runTag") + " Song A FINAL"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
