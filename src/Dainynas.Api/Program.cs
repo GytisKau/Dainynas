@@ -33,16 +33,13 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException(
-        "JWT key is missing.");
+    ?? throw new InvalidOperationException("JWT key is missing.");
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
-    ?? throw new InvalidOperationException(
-        "JWT issuer is missing.");
+    ?? throw new InvalidOperationException("JWT issuer is missing.");
 
 var jwtAudience = builder.Configuration["Jwt:Audience"]
-    ?? throw new InvalidOperationException(
-        "JWT audience is missing.");
+    ?? throw new InvalidOperationException("JWT audience is missing.");
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -103,19 +100,39 @@ builder.Services
                     return;
                 }
 
-                // Ensure current privileges have not changed.
+                var user = await db.Users
+                    .AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(u => new
+                    {
+                        u.Role,
+                        u.IsBlocked
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (user is null)
+                {
+                    context.Fail("User no longer exists.");
+                    return;
+                }
+
+                if (user.IsBlocked)
+                {
+                    context.Fail("User account is blocked.");
+                    return;
+                }
+
                 var tokenRole = context.Principal?
                     .FindFirst(ClaimTypes.Role)?.Value;
 
-                var roleIsCurrent = await db.Users.AnyAsync(u =>
-                    u.Id == userId &&
-                    u.Role == tokenRole);
-
-                if (!roleIsCurrent)
+                if (string.IsNullOrWhiteSpace(tokenRole) ||
+                    user.Role != tokenRole)
                 {
                     context.Fail("User role has changed.");
+                    return;
                 }
             }
+
         };
     });
 

@@ -138,6 +138,12 @@ public class TokenService(
             return null;
         }
 
+        var canRefresh = await _context.Users
+            .AnyAsync(u => u.Id == session.UserId && !u.IsBlocked);
+
+        if (!canRefresh)
+            return null;
+
         // Atomic operation: only one request can revoke
         // this session successfully.
         var affectedRows = await _context.RefreshSessions
