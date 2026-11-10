@@ -70,6 +70,9 @@ public class AuthController(
         var user = await _context.Users
             .FirstOrDefaultAsync(user => user.Email == normalizedEmail);
 
+        if (user is null)
+            return Unauthorized(new{ message = "Invalid email or password." });
+
         var verificationResult =
             _passwordHasher.VerifyHashedPassword(
                 user,
@@ -77,8 +80,7 @@ public class AuthController(
                 dto.Password
             );
 
-        if (user is null || 
-            user.IsBlocked || 
+        if (user.IsBlocked || 
             verificationResult == PasswordVerificationResult.Failed)
             return Unauthorized(new{ message = "Invalid email or password." });
 
