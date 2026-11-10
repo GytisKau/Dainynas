@@ -1,0 +1,27 @@
+info:
+  name: Reject invalid role
+  type: http
+  seq: 18
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/admin/users/{{adminSubjectId}}/role'
+  auth:
+    type: bearer
+    token: '{{adminToken}}'
+  body:
+    type: json
+    data: |-
+      {
+        "role": "Root"
+      }
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 400", () => expect(res.status).to.equal(400));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

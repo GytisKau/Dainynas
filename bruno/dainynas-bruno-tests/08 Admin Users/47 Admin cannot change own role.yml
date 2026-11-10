@@ -1,0 +1,27 @@
+info:
+  name: Admin cannot change own role
+  type: http
+  seq: 47
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/admin/users/{{adminCurrentId}}/role'
+  auth:
+    type: bearer
+    token: '{{adminToken}}'
+  body:
+    type: json
+    data: |-
+      {
+        "role": "User"
+      }
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 403", () => expect(res.status).to.equal(403));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

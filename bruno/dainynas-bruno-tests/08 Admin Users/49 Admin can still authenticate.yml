@@ -1,0 +1,22 @@
+info:
+  name: Admin can still authenticate
+  type: http
+  seq: 49
+http:
+  method: GET
+  url: '{{baseUrl}}/api/auth/me'
+  auth:
+    type: bearer
+    token: '{{adminToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 200", () => expect(res.status).to.equal(200));
+      test("Administrator remains active", () => { expect(res.body.role).to.equal("Admin"); expect(Number(res.body.id)).to.equal(Number(bru.getVar("adminCurrentId"))); });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

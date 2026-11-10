@@ -1,0 +1,27 @@
+info:
+  name: Moderator cannot change user role
+  type: http
+  seq: 16
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/admin/users/{{adminSubjectId}}/role'
+  auth:
+    type: bearer
+    token: '{{moderatorToken}}'
+  body:
+    type: json
+    data: |-
+      {
+        "role": "Moderator"
+      }
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 403", () => expect(res.status).to.equal(403));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,24 @@
+info:
+  name: Refresh revoked by admin rejected
+  type: http
+  seq: 45
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/refresh'
+  body:
+    type: json
+    data: |-
+      {
+        "refreshToken": "{{adminSubjectRefresh}}"
+      }
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 401", () => expect(res.status).to.equal(401));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

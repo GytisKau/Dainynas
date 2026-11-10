@@ -1,0 +1,21 @@
+info:
+  name: Admin cannot block self
+  type: http
+  seq: 48
+http:
+  method: POST
+  url: '{{baseUrl}}/api/admin/users/{{adminCurrentId}}/block'
+  auth:
+    type: bearer
+    token: '{{adminToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 403", () => expect(res.status).to.equal(403));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

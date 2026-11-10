@@ -1,6 +1,6 @@
 opencollection: 1.0.0
 info:
-  name: Dainynas API - Moderation and Security Tests
+  name: Dainynas API
 config:
   proxy:
     inherit: true

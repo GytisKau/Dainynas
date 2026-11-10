@@ -1,0 +1,29 @@
+info:
+  name: Fresh User B login
+  type: http
+  seq: 3
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{userBEmail}}",
+        "password": "{{userPassword}}"
+      }
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 200) bru.setVar("userBToken", res.body.token);
+  - type: tests
+    code: |-
+      test("HTTP 200", () => expect(res.status).to.equal(200));
+      test("Authenticated as User", () => expect(res.body.role).to.equal("User"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

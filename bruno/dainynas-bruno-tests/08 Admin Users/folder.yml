@@ -1,0 +1,8 @@
+info:
+  name: 08 Admin Users
+  type: folder
+  seq: 9
+docs:
+  content: User/Moderator/Admin rolės, paskyrų blokavimas, atblokavimas, sesijų atšaukimas
+    ir autorizacijos patikros. Naudojama atskira sugeneruota testinė paskyra.
+  type: text/markdown

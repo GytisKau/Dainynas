@@ -1,0 +1,34 @@
+info:
+  name: Create dedicated admin test user
+  type: http
+  seq: 11
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/register'
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{adminSubjectEmail}}",
+        "password": "{{adminSubjectPassword}}"
+      }
+runtime:
+  scripts:
+  - type: before-request
+    code: |-
+      const suffix = Date.now().toString() + Math.floor(Math.random()*100000).toString();
+      bru.setVar("adminSubjectEmail", "bruno.admin." + suffix + "@example.test");
+      bru.setVar("adminSubjectPassword", "AdmTest!" + suffix + "xX");
+  - type: after-response
+    code: |-
+      if (res.status === 201) { bru.setVar("adminSubjectToken", res.body.token); bru.setVar("adminSubjectRefresh", res.body.refreshToken); }
+  - type: tests
+    code: |-
+      test("HTTP 201", () => expect(res.status).to.equal(201));
+      test("Default role and token pair", () => { expect(res.body.role).to.equal("User"); expect(res.body.token).to.be.a("string").and.not.empty; expect(res.body.refreshToken).to.be.a("string").and.not.empty; });
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,21 @@
+info:
+  name: Unknown user block returns 404
+  type: http
+  seq: 52
+http:
+  method: POST
+  url: '{{baseUrl}}/api/admin/users/2147483000/block'
+  auth:
+    type: bearer
+    token: '{{adminToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 404", () => expect(res.status).to.equal(404));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

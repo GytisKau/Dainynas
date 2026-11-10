@@ -1,0 +1,29 @@
+info:
+  name: Fresh Moderator login
+  type: http
+  seq: 2
+http:
+  method: POST
+  url: '{{baseUrl}}/api/auth/login'
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{moderatorEmail}}",
+        "password": "{{moderatorPassword}}"
+      }
+runtime:
+  scripts:
+  - type: after-response
+    code: |-
+      if (res.status === 200) bru.setVar("moderatorToken", res.body.token);
+  - type: tests
+    code: |-
+      test("HTTP 200", () => expect(res.status).to.equal(200));
+      test("Authenticated as Moderator", () => expect(res.body.role).to.equal("Moderator"));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

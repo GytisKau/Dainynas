@@ -2,7 +2,6 @@ info:
   name: 00 Auth
   type: folder
   seq: 1
-
 docs:
   content: Registracija, prisijungimas, rolės, pradinė patikra
   type: text/markdown

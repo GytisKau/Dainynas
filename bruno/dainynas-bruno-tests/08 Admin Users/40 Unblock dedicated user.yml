@@ -1,0 +1,21 @@
+info:
+  name: Unblock dedicated user
+  type: http
+  seq: 40
+http:
+  method: POST
+  url: '{{baseUrl}}/api/admin/users/{{adminSubjectId}}/unblock'
+  auth:
+    type: bearer
+    token: '{{adminToken}}'
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", () => expect(res.status).to.equal(204));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

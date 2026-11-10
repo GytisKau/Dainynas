@@ -1,0 +1,27 @@
+info:
+  name: Demote test Admin to User
+  type: http
+  seq: 30
+http:
+  method: PUT
+  url: '{{baseUrl}}/api/admin/users/{{adminSubjectId}}/role'
+  auth:
+    type: bearer
+    token: '{{adminToken}}'
+  body:
+    type: json
+    data: |-
+      {
+        "role": "User"
+      }
+runtime:
+  scripts:
+  - type: tests
+    code: |-
+      test("HTTP 204", () => expect(res.status).to.equal(204));
+settings:
+  encodeUrl: false
+  timeout: 15000
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
