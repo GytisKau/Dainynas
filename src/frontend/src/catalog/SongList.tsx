@@ -1,4 +1,5 @@
 import type { Song } from './types'
+import { Link } from 'react-router'
 
 type SongListProps = {
   songs: Song[]
@@ -22,7 +23,12 @@ export default function SongList({ songs, loading }: SongListProps) {
             </span>
           )}
 
-          <strong className="font-semibold">{song.title}</strong>
+          <Link
+            to={`/dainos/${song.id}`}
+            className="w-fit max-w-full font-semibold text-ink hover:text-accent hover:underline"
+          >
+            {song.title}
+          </Link>
 
           <span className="text-muted">{song.performerName}</span>
         </li>

@@ -88,7 +88,7 @@ export default function SongCatalogPage() {
   const { data, status } = catalog
   
   return (
-    <main className="mx-auto w-full max-w-[77rem] flex-1 px-4 pt-6 pb-8 md:pt-8">
+    <main className="mx-auto w-full max-w-308 flex-1 px-4 pt-6 pb-8 md:pt-8">
       <h1 className="mb-4 text-2xl font-semibold text-accent md:text-3xl">
         Dainų katalogas
       </h1>
