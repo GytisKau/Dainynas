@@ -40,7 +40,17 @@ function Icon({ path }: { path: string }) {
   )
 }
 
-export default function SiteHeader() {
+type SiteHeaderProps = {
+  signedIn: boolean
+  loggingOut: boolean
+  onLogout: () => Promise<void>
+}
+
+export default function SiteHeader({
+  signedIn,
+  loggingOut,
+  onLogout,
+}: SiteHeaderProps) {
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -107,6 +117,34 @@ export default function SiteHeader() {
             })}
           </ul>
         </nav>
+
+        <div
+          className={`col-span-2 pb-2 md:col-span-1 md:col-start-3 md:row-start-1 md:block md:justify-self-end md:pb-0 ${
+            menuOpen ? 'block' : 'hidden'
+          }`}
+        >
+          {signedIn ? (
+            <button
+              type="button"
+              disabled={loggingOut}
+              onClick={() => {
+                setMenuOpen(false)
+                void onLogout()
+              }}
+              className="min-h-11 rounded-lg border border-field-border px-4 font-semibold text-ink transition-colors hover:bg-hover disabled:opacity-60"
+            >
+              {loggingOut ? 'Atsijungiama…' : 'Atsijungti'}
+            </button>
+          ) : (
+            <Link
+              to="/prisijungti"
+              onClick={() => setMenuOpen(false)}
+              className="inline-flex min-h-11 items-center rounded-lg bg-accent px-4 font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+            >
+              Prisijungti
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   )

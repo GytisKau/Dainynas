@@ -15,14 +15,40 @@ namespace Dainynas.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class AuthController(
     DainynasDbContext context,
     IPasswordHasher<User> passwordHasher,
-    TokenService tokenService) : ControllerBase
+    TokenService tokenService,
+    IWebHostEnvironment environment) : ControllerBase
 {
+    private const string RefreshCookieName = "dainynas.refresh";
+
     private readonly DainynasDbContext _context = context;
     private readonly IPasswordHasher<User> _passwordHasher = passwordHasher;
     private readonly TokenService _tokenService = tokenService;
+    private readonly IWebHostEnvironment _environment = environment;
+
+    private CookieOptions RefreshCookieOptions() => new()
+    {
+        HttpOnly = true,
+        Secure = !_environment.IsDevelopment() || Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Path = "/api"
+    };
+
+    private void WriteRefreshCookie(string refreshToken)
+    {
+        Response.Cookies.Append(
+            RefreshCookieName,
+            refreshToken,
+            RefreshCookieOptions());
+    }
+
+    private void ClearRefreshCookie()
+    {
+        Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions());
+    }
 
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status201Created)]
@@ -53,6 +79,7 @@ public class AuthController(
         await _context.SaveChangesAsync();
 
         var response = await _tokenService.CreateTokenPairAsync(user);
+        WriteRefreshCookie(response.RefreshToken);
 
         return StatusCode(
             StatusCodes.Status201Created,
@@ -95,7 +122,10 @@ public class AuthController(
             await _context.SaveChangesAsync();
         }
 
-        return Ok(await _tokenService.CreateTokenPairAsync(user));
+        var response = await _tokenService.CreateTokenPairAsync(user);
+        WriteRefreshCookie(response.RefreshToken);
+
+        return Ok(response);
     }
 
     [Authorize]
@@ -125,18 +155,50 @@ public class AuthController(
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<AuthResponseDto>> Refresh(
-        RefreshTokenDto dto)
+    public Task<ActionResult<AuthResponseDto>> Refresh(RefreshTokenDto dto)
     {
-        var response = await _tokenService.RefreshAsync(dto.RefreshToken);
+        return RotateRefreshTokenAsync(dto.RefreshToken, clearInvalidCookie: false);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("restore")]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public Task<ActionResult<AuthResponseDto>> Restore()
+    {
+        if (Request.Headers["X-Dainynas-Request"] != "1")
+        {
+            return Task.FromResult<ActionResult<AuthResponseDto>>(BadRequest());
+        }
+
+        if (!Request.Cookies.TryGetValue(RefreshCookieName, out var refreshToken))
+        {
+            return Task.FromResult<ActionResult<AuthResponseDto>>(NoContent());
+        }
+
+        return RotateRefreshTokenAsync(refreshToken, clearInvalidCookie: true);
+    }
+
+    private async Task<ActionResult<AuthResponseDto>> RotateRefreshTokenAsync(
+        string refreshToken,
+        bool clearInvalidCookie)
+    {
+        var response = await _tokenService.RefreshAsync(refreshToken);
 
         if (response is null)
         {
+            if (clearInvalidCookie)
+                ClearRefreshCookie();
+
             return Unauthorized(new
             {
                 message = "Invalid or expired refresh token."
             });
         }
+
+        WriteRefreshCookie(response.RefreshToken);
 
         return Ok(response);
     }
@@ -158,6 +220,7 @@ public class AuthController(
         }
 
         await _tokenService.RevokeSessionAsync(sessionId, userId);
+        ClearRefreshCookie();
 
         return NoContent();
     }

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router'
 import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import type { PerformerDetails } from '../songs/types'
+import CreatePerformerDialog from './CreatePerformerDialog'
 
 type PerformerItem = PerformerDetails & {
   id: number | string
@@ -45,7 +46,7 @@ function readSearch(params: URLSearchParams): Search | string {
   }
 }
 
-export default function PerformerCatalogPage() {
+export default function PerformerCatalogPage({ token }: { token: string | null }) {
   const [params, setParams] = useSearchParams()
   const search = readSearch(params)
 
@@ -58,9 +59,13 @@ export default function PerformerCatalogPage() {
 
   return (
     <main className="mx-auto w-full max-w-308 flex-1 px-4 pt-6 pb-8 md:pt-8">
-      <h1 className="mb-4 text-2xl font-semibold text-accent md:text-3xl">
-        Pateikėjų katalogas
-      </h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-accent md:text-3xl">
+          Pateikėjų katalogas
+        </h1>
+
+        {token && <CreatePerformerDialog token={token} />}
+      </div>
 
       {typeof search === 'string' ? (
         <>
