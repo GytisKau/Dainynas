@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { SubmitEvent } from 'react'
-import { emptyFilters, type SongFilters } from './types'
+import { type SongFilters } from './types'
 
 type PerformerOption = {
   id: number | string
@@ -14,15 +14,19 @@ type PerformerPage = {
 
 type SongSearchFormProps = {
   activeFilterCount: number
+  initialFilters: SongFilters
   onSearch: (filters: SongFilters) => void
 }
 
 export default function SongSearchForm({
   activeFilterCount,
+  initialFilters,
   onSearch,
 }: SongSearchFormProps) {
-  const [filters, setFilters] = useState<SongFilters>(emptyFilters)
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filters, setFilters] = useState<SongFilters>(initialFilters)
+  const [filtersOpen, setFiltersOpen] = useState(
+    Boolean(initialFilters.year || initialFilters.performerId),
+  )
 
   // Čia perkelk performers, performerStatus ir performerAttempt būsenas
   // bei esamą useEffect, kuris užkrauna /api/Performers.
@@ -126,6 +130,13 @@ export default function SongSearchForm({
             <option value="">
               {performerStatus === 'loading' ? 'Įkeliami pateikėjai…' : 'Visi pateikėjai'}
             </option>
+            {filters.performerId &&
+              !performers.some((person) => String(person.id) === filters.performerId) && (
+                <option value={filters.performerId}>
+                  Pateikėjas #{filters.performerId}
+                </option>
+              )
+            }
             {performers.map((performer) => (
               <option key={performer.id} value={String(performer.id)}>
                 {performer.name}

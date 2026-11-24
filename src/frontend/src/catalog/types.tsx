@@ -21,6 +21,7 @@ export type SongFilters = {
 
 export type SongSearch = SongFilters & {
   page: number
+  pageSize: number
 }
 
 export const emptyFilters: SongFilters = {
@@ -28,3 +29,4 @@ export const emptyFilters: SongFilters = {
   year: '',
   performerId: '',
 }
+
