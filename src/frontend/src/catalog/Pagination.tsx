@@ -19,7 +19,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
 
   return (
     <nav
-      aria-label="Dainų katalogo puslapiai"
+      aria-label="Rezultatų puslapiai"
       className="mt-4 flex flex-wrap items-center justify-center gap-1"
     >
       <button

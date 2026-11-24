@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import type { PerformerDetails, SongDetails } from './types'
 import { useApiResource } from './useApiResource'
 import { ArchiveMedia, ArchiveNotice } from './ArchiveMedia'
@@ -25,6 +26,12 @@ export default function SongInfoCard({ song }: { song: SongDetails }) {
   return (
     <aside className="min-w-0 rounded-xl border border-line bg-surface p-5">
       <h2 className="text-xl font-semibold">Apie pateikėją</h2>
+      <Link
+        to={`/pateikejai/${song.performerId}`}
+        className="mt-3 inline-block font-semibold text-accent underline underline-offset-4"
+      >
+        {song.performerName}
+      </Link>
 
       {performer.status === 'loading' && (
         <p role="status" className="mt-3 text-muted">Įkeliama informacija…</p>
@@ -44,8 +51,6 @@ export default function SongInfoCard({ song }: { song: SongDetails }) {
               label={performer.data.name}
             />
           )}
-
-          <p className="font-semibold">{performer.data.name}</p>
 
           <dl className="space-y-2 text-sm">
             {performer.data.birthYear != null && (

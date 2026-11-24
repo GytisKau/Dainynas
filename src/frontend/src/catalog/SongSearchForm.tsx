@@ -18,18 +18,7 @@ type SongSearchFormProps = {
   onSearch: (filters: SongFilters) => void
 }
 
-export default function SongSearchForm({
-  activeFilterCount,
-  initialFilters,
-  onSearch,
-}: SongSearchFormProps) {
-  const [filters, setFilters] = useState<SongFilters>(initialFilters)
-  const [filtersOpen, setFiltersOpen] = useState(
-    Boolean(initialFilters.year || initialFilters.performerId),
-  )
-
-  // Čia perkelk performers, performerStatus ir performerAttempt būsenas
-  // bei esamą useEffect, kuris užkrauna /api/Performers.
+export default function SongSearchForm(props: SongSearchFormProps) {
   const [performers, setPerformers] = useState<PerformerOption[]>([])
   const [performerStatus, setPerformerStatus] =
     useState<'loading' | 'ready' | 'error'>('loading')
@@ -78,6 +67,41 @@ export default function SongSearchForm({
     void loadPerformers()
     return () => controller.abort()
   }, [performerAttempt])
+
+  const { title, year, performerId } = props.initialFilters
+
+  return (
+    <SongSearchFields
+      key={JSON.stringify([title, year, performerId])}
+      {...props}
+      performers={performers}
+      performerStatus={performerStatus}
+      onRetryPerformers={() => {
+        setPerformerStatus('loading')
+        setPerformerAttempt((attempt) => attempt + 1)
+      }}
+    />
+  )
+}
+
+type SongSearchFieldsProps = SongSearchFormProps & {
+  performers: PerformerOption[]
+  performerStatus: 'loading' | 'ready' | 'error'
+  onRetryPerformers: () => void
+}
+
+function SongSearchFields({
+  activeFilterCount,
+  initialFilters,
+  onSearch,
+  performers,
+  performerStatus,
+  onRetryPerformers,
+}: SongSearchFieldsProps) {
+  const [filters, setFilters] = useState<SongFilters>(initialFilters)
+  const [filtersOpen, setFiltersOpen] = useState(
+    Boolean(initialFilters.year || initialFilters.performerId),
+  )
 
   function updateFilter(field: keyof SongFilters, value: string) {
     setFilters((previous) => ({ ...previous, [field]: value }))
@@ -133,7 +157,9 @@ export default function SongSearchForm({
             {filters.performerId &&
               !performers.some((person) => String(person.id) === filters.performerId) && (
                 <option value={filters.performerId}>
-                  Pateikėjas #{filters.performerId}
+                  {performerStatus === 'loading'
+                    ? 'Įkeliamas pateikėjo vardas…'
+                    : `Pateikėjas #${filters.performerId}`}
                 </option>
               )
             }
@@ -150,10 +176,7 @@ export default function SongSearchForm({
               <button
                 type="button"
                 className="underline"
-                onClick={() => {
-                  setPerformerStatus('loading')
-                  setPerformerAttempt((attempt) => attempt + 1)
-                }}
+                onClick={onRetryPerformers}
               >
                 Bandyti dar kartą
               </button>
