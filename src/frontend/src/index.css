@@ -46,4 +46,23 @@
   :focus-visible {
     @apply outline-2 outline-offset-3 outline-accent;
   }
+
+  audio {
+    @apply block h-10 w-full;
+  }
+}
+
+@layer utilities {
+  audio::-webkit-media-controls {
+    @apply pr-px;
+  }
+
+  audio::-webkit-media-controls-panel {
+    @apply bg-chrome;
+  }
+
+  audio::-webkit-media-controls-enclosure {
+    @apply rounded-md border border-line text-base shadow-xs
+      transition-[color,box-shadow];
+  }
 }

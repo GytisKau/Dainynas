@@ -102,7 +102,7 @@ function PerformerSearchForm({ initialName, onSearch }: SearchFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid max-w-xl grid-cols-[minmax(0,1fr)_auto] gap-2"
+      className="grid max-full grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-1"
     >
       <label htmlFor="performer-name-search" className="col-span-2">
         Vardas arba pavardė

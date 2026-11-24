@@ -13,11 +13,14 @@ function isInt32(value: string) {
   return number >= -2147483648 && number <= 2147483647
 }
 
-export function parseCatalogQuery(params: URLSearchParams): ParsedQuery {
+export function parseCatalogQuery(
+  params: URLSearchParams, 
+  allowedKeys: ReadonlySet<string> = allowed
+): ParsedQuery {
   const seen = new Set<string>()
 
   for (const [key, value] of params) {
-    if (!allowed.has(key)) {
+    if (!allowedKeys.has(key)) {
       return { ok: false, message: `Nežinomas katalogo parametras „${key}“.` }
     }
 
