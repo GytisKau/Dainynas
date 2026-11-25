@@ -1,8 +1,8 @@
-import { useRef, useState, useId, useCallback } from 'react'
+import { useRef, useState, useId } from 'react'
 import type { SubmitEvent } from 'react'
 
 import type { PerformerDetails } from '../songs/types'
-import Toast from '../components/Toast'
+import { useToast } from '../components/useToast'
 
 const fieldClass =
   'min-h-11 w-full rounded-lg border border-field-border bg-field px-3 text-ink'
@@ -29,13 +29,12 @@ export default function PerformerDialog({
 }: PerformerDialogProps) {
   const titleId = useId()
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const notify = useToast()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
-  const dismissNotice = useCallback(() => setNotice(''), [])
+
   
   function openDialog() {
-    setNotice('')
     setError('')
     dialogRef.current?.querySelector('form')?.reset()
     dialogRef.current?.showModal()
@@ -99,20 +98,21 @@ export default function PerformerDialog({
         return
       }
 
+      let message: string
+
       if (performer) {
-        setNotice(
-          response.status === 202
-            ? `Pateikėjo „${name}“ pakeitimai priimti apdoroti.`
-            : `Pateikėjo „${name}“ duomenys atnaujinti.`,
-        )
+        message = response.status === 202
+          ? `Pateikėjo „${name}“ pakeitimai priimti apdoroti.`
+          : `Pateikėjo „${name}“ duomenys atnaujinti.`
       } else {
         const created = await response.json()
-        setNotice(`Pateikėjas „${created.name}“ sukurtas.`)
+        message = `Pateikėjas „${created.name}“ sukurtas.`
       }
 
       form.reset()
       dialogRef.current?.close()
       onSaved?.()
+      notify('success', message)
     } catch {
       setError('Nepavyko gauti serverio atsakymo. Patikrink ryšį.')
     } finally {
@@ -125,8 +125,6 @@ export default function PerformerDialog({
       <button type="button" onClick={openDialog} className={primaryButton}>
         {performer ? 'Redaguoti' : 'Pridėti pateikėją'}
       </button>
-
-      <Toast message={notice} onDismiss={dismissNotice} />
 
       <dialog
         ref={dialogRef}

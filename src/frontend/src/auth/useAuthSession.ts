@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { refreshSession, requestLogout, restoreSession, type AuthSession } from './authApi'
+import { useToast } from '../components/useToast'
 
 export function useAuthSession() {
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -7,6 +8,7 @@ export function useAuthSession() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [restoring, setRestoring] = useState(true)
   const [restoreFailed, setRestoreFailed] = useState(false)
+  const notify = useToast()
 
   const current = useRef<AuthSession | null>(null)
   const refreshing = useRef<Promise<AuthSession | null> | null>(null)
@@ -143,9 +145,10 @@ export function useAuthSession() {
       }
 
       saveSession(null)
-      setMessage('Sėkmingai atsijungei.')
+      notify('success', 'Sėkmingai atsijungei.')
     } catch (error) {
-      setMessage(
+      notify(
+        'error',
         error instanceof TypeError
           ? 'Nepavyko susisiekti su serveriu. Pabandyk atsijungti dar kartą.'
           : error instanceof Error

@@ -3,6 +3,7 @@ import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import PerformerDialog, { type EditablePerformer } from './PerformerDialog'
 import { removePerformer } from './performerApi'
+import { useToast } from '../components/useToast'
 
 type MyPerformersData = {
   items: EditablePerformer[]
@@ -34,12 +35,11 @@ export default function MyPerformerResults({
   const [selected, setSelected] = useState<EditablePerformer | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
-  const [notice, setNotice] = useState('')
+  const notify = useToast()
 
   function confirmDelete(performer: EditablePerformer) {
     setSelected(performer)
     setDeleteError('')
-    setNotice('')
     deleteDialog.current?.showModal()
   }
 
@@ -54,12 +54,14 @@ export default function MyPerformerResults({
     try {
       const result = await removePerformer(selected.id, token)
 
-      setNotice(
+      deleteDialog.current?.close()
+
+      notify(
+        'success',
         result === 'deleted'
           ? `Pateikėjas „${selected.name}“ pašalintas.`
-          : 'Šio pateikėjo jau nebėra.',
+          : 'Šio pateikėjo sąraše jau nebėra.',
       )
-      deleteDialog.current?.close()
 
       // Jei rodyta vienintelė eilutė dingo, grįžtame į galiojantį puslapį.
       const lastRow = data?.items.length === 1
@@ -152,10 +154,6 @@ export default function MyPerformerResults({
           />
         </>
       )}
-
-      <p role="status" className="mt-3 text-sm text-muted">
-        {notice}
-      </p>
 
       <dialog
         ref={deleteDialog}
