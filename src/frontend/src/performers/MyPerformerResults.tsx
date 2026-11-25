@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
-import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
-import PerformerDialog, { type EditablePerformer } from './PerformerDialog'
 import { removePerformer } from './performerApi'
 import { useToast } from '../components/useToast'
+import Pagination from '../catalog/Pagination'
+import PerformerDialog, { type EditablePerformer } from './PerformerDialog'
+import PerformerPublicationButton from './PerformerPublicationButton'
 
 type MyPerformersData = {
   items: EditablePerformer[]
@@ -17,6 +18,12 @@ type MyPerformerResultsProps = {
   page: number
   onPageChange: (page: number) => void
   revision: number
+}
+
+const publicationLabels: Record<string, string> = {
+  Draft: 'Juodraštis',
+  Pending: 'Laukia peržiūros',
+  Published: 'Paskelbtas',
 }
 
 export default function MyPerformerResults({
@@ -121,7 +128,7 @@ export default function MyPerformerResults({
               >
                 <div className="min-w-0 wrap-anywhere">
                   <p className="text-xs font-medium text-accent">
-                    {performer.publicationStatus}
+                    {publicationLabels[performer.publicationStatus] ?? performer.publicationStatus}
                   </p>
                   <p className="font-semibold">{performer.name}</p>
                   {performer.residence && (
@@ -132,6 +139,14 @@ export default function MyPerformerResults({
                 <div className="flex flex-wrap items-center gap-2">
                   <PerformerDialog token={token} performer={performer} onSaved={retry} />
                   
+                  <PerformerPublicationButton
+                    performer={performer}
+                    token={token}
+                    disabled={status === 'loading'}
+                    onChanged={retry}
+                  />
+
+                  { performer.publicationStatus === 'Draft' && (
                   <button
                     type="button"
                     disabled={status === 'loading'}
@@ -142,6 +157,7 @@ export default function MyPerformerResults({
                   >
                     Pašalinti
                   </button>
+                  )}
                 </div>
               </li>
             ))}
