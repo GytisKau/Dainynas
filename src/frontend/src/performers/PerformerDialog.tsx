@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useId } from 'react'
 import type { SubmitEvent } from 'react'
+
+import type { PerformerDetails } from '../songs/types'
 
 const fieldClass =
   'min-h-11 w-full rounded-lg border border-field-border bg-field px-3 text-ink'
@@ -8,7 +10,23 @@ const primaryButton =
   'min-h-11 rounded-lg bg-accent px-4 font-semibold text-on-accent ' +
   'transition-colors hover:bg-accent-hover disabled:opacity-60'
 
-export default function CreatePerformerDialog({ token }: { token: string }) {
+export type EditablePerformer = PerformerDetails & {
+  id: number | string
+  publicationStatus: string
+}
+
+type PerformerDialogProps = {
+  token: string
+  performer?: EditablePerformer
+  onSaved?: () => void
+}
+
+export default function PerformerDialog({
+  token,
+  performer,
+  onSaved,
+}: PerformerDialogProps) {
+  const titleId = useId()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -24,6 +42,7 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
   function openDialog() {
     setNotice('')
     setError('')
+    dialogRef.current?.querySelector('form')?.reset()
     dialogRef.current?.showModal()
   }
 
@@ -47,8 +66,12 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
     setError('')
 
     try {
-      const response = await fetch('/api/Performers', {
-        method: 'POST',
+      const url = performer
+        ? `/api/Performers/${encodeURIComponent(String(performer.id))}`
+        : '/api/Performers'
+
+      const response = await fetch(url, {
+        method: performer ? 'PUT' : 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -64,20 +87,37 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
 
       if (!response.ok) {
         const problem = await response.json().catch(() => null)
-        const detail = problem?.detail || problem?.title
 
-        if (response.status === 401) {
-          setError('Sesija nebegalioja. Prisijunk iš naujo.')
-        } else {
-          setError(detail || `Pateikėjo išsaugoti nepavyko (HTTP ${response.status}).`)
+        const messages: Record<number, string> = {
+          401: 'Sesija nebegalioja. Prisijunk iš naujo.',
+          403: 'Neturi teisės redaguoti šio pateikėjo.',
+          404: 'Pateikėjas nerastas.',
+          409: 'Pakeitimų šiuo metu išsaugoti negalima.',
         }
+
+        setError(
+          problem?.detail ||
+          messages[response.status] ||
+          problem?.title ||
+          `Nepavyko išsaugoti pateikėjo (HTTP ${response.status}).`,
+        )
         return
       }
 
-      const created = await response.json()
-      setNotice(`Pateikėjas „${created.name}“ sukurtas.`)
+      if (performer) {
+        setNotice(
+          response.status === 202
+            ? `Pateikėjo „${name}“ pakeitimai priimti apdoroti.`
+            : `Pateikėjo „${name}“ duomenys atnaujinti.`,
+        )
+      } else {
+        const created = await response.json()
+        setNotice(`Pateikėjas „${created.name}“ sukurtas.`)
+      }
+
       form.reset()
       dialogRef.current?.close()
+      onSaved?.()
     } catch {
       setError('Nepavyko gauti serverio atsakymo. Patikrink ryšį.')
     } finally {
@@ -88,7 +128,7 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
   return (
     <div>
       <button type="button" onClick={openDialog} className={primaryButton}>
-        Pridėti pateikėją
+        {performer ? 'Redaguoti' : 'Pridėti pateikėją'}
       </button>
 
       <div
@@ -122,7 +162,7 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
 
       <dialog
         ref={dialogRef}
-        aria-labelledby="create-performer-title"
+        aria-labelledby={titleId}
         onCancel={(event) => {
           if (saving) event.preventDefault()
         }}
@@ -130,14 +170,14 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
                    overflow-y-auto rounded-xl border border-line bg-surface p-5
                    text-ink backdrop:bg-black/60 md:p-7"
       >
-        <h2 id="create-performer-title" className="text-xl font-semibold">
-          Naujas pateikėjas
+        <h2 id={titleId} className="text-xl font-semibold">
+          {performer ? 'Redaguoti pateikėją' : 'Naujas pateikėjas'}
         </h2>
 
         <form onSubmit={handleSubmit} className="mt-5 grid gap-4">
           <label className="grid gap-1">
             Vardas ir pavardė (privaloma)
-            <input name="name" required maxLength={200} className={fieldClass} />
+            <input name="name" required maxLength={200} defaultValue={performer?.name ?? ''} className={fieldClass} autoComplete='off' />
           </label>
 
           <label className="grid gap-1">
@@ -148,13 +188,14 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
               min={1800}
               max={2100}
               step={1}
+              defaultValue={performer?.birthYear ?? ''}
               className={fieldClass}
             />
           </label>
 
           <label className="grid gap-1">
             Gyvenamoji vieta
-            <input name="residence" maxLength={200} className={fieldClass} />
+            <input name="residence" maxLength={200} defaultValue={performer?.residence ?? ''} className={fieldClass} />
           </label>
 
           <label className="grid gap-1">
@@ -163,6 +204,7 @@ export default function CreatePerformerDialog({ token }: { token: string }) {
               name="photoUrl"
               type="url"
               placeholder="https://…"
+              defaultValue={performer?.photoUrl ?? ''}
               className={fieldClass}
             />
           </label>

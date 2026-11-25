@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router'
 import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import type { PerformerDetails } from '../songs/types'
-import CreatePerformerDialog from './CreatePerformerDialog'
+import CreatePerformerDialog from './PerformerDialog'
 
 type PerformerItem = PerformerDetails & {
   id: number | string
