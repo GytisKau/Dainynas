@@ -75,11 +75,11 @@ export default function App() {
         />
       </Routes>
 
-      <footer className="bg-chrome py-4 text-ink">
+      {/* <footer className="bg-chrome py-4 text-ink">
         <div className="mx-auto w-full max-w-308 px-4">
           Dainynas · Elektroninis folklorinių dainų dainynas
         </div>
-      </footer>
+      </footer> */}
     </div>
   )
 }
