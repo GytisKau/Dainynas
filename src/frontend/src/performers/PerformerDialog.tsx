@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, useId } from 'react'
+import { useRef, useState, useId, useCallback } from 'react'
 import type { SubmitEvent } from 'react'
 
 import type { PerformerDetails } from '../songs/types'
+import Toast from '../components/Toast'
 
 const fieldClass =
   'min-h-11 w-full rounded-lg border border-field-border bg-field px-3 text-ink'
@@ -31,14 +32,8 @@ export default function PerformerDialog({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-
-  useEffect(() => {
-    if (!notice) return
-
-    const timer = window.setTimeout(() => setNotice(''), 5000)
-    return () => window.clearTimeout(timer)
-  }, [notice])
-
+  const dismissNotice = useCallback(() => setNotice(''), [])
+  
   function openDialog() {
     setNotice('')
     setError('')
@@ -131,34 +126,7 @@ export default function PerformerDialog({
         {performer ? 'Redaguoti' : 'Pridėti pateikėją'}
       </button>
 
-      <div
-        role="status"
-        className="pointer-events-none fixed inset-x-4 bottom-4 z-50
-                  sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-96"
-      >
-        {notice && (
-          <div
-            className="flex items-start gap-3 rounded-xl border border-line
-                      bg-surface px-4 py-3 text-ink shadow-lg"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mt-0.5 size-5 shrink-0 text-accent"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="m8 12 3 3 5-6" />
-            </svg>
-
-            <p className="wrap-anywhere text-sm font-medium">{notice}</p>
-          </div>
-        )}
-      </div>
+      <Toast message={notice} onDismiss={dismissNotice} />
 
       <dialog
         ref={dialogRef}

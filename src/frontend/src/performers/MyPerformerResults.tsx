@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import PerformerDialog, { type EditablePerformer } from './PerformerDialog'
+import { removePerformer } from './performerApi'
 
 type MyPerformersData = {
   items: EditablePerformer[]
@@ -51,59 +52,31 @@ export default function MyPerformerResults({
     setDeleteError('')
 
     try {
-      const response = await fetch(
-        `/api/Performers/${encodeURIComponent(String(selected.id))}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        },
+      const result = await removePerformer(selected.id, token)
+
+      setNotice(
+        result === 'deleted'
+          ? `Pateikėjas „${selected.name}“ pašalintas.`
+          : 'Šio pateikėjo jau nebėra.',
       )
+      deleteDialog.current?.close()
 
-      if (response.status === 204) {
-        setNotice(`Pateikėjas „${selected.name}“ pašalintas.`)
-        deleteDialog.current?.close()
+      // Jei rodyta vienintelė eilutė dingo, grįžtame į galiojantį puslapį.
+      const lastRow = data?.items.length === 1
+      const lastPage = data && Number(data.page) === Number(data.totalPages)
 
-        // Pašalinus vienintelę paskutinio puslapio eilutę,
-        // grįžtame į artimiausią likusį puslapį.
-        if (data && Number(data.page) === Number(data.totalPages)
-            && data.items.length === 1 && Number(data.page) > 1) {
-          onPageChange(Number(data.page) - 1)
-        } else {
-          retry()
-        }
-
-        return
+      if (page > 1 && lastRow && (lastPage || result === 'already-missing')) {
+        onPageChange(page - 1)
+      } else {
+        retry()
       }
-
-      if (response.status === 404) {
-        setNotice('Šio pateikėjo jau nebėra. Sąrašas atnaujintas.')
-        deleteDialog.current?.close()
-        if (page > 1 && data?.items.length === 1) {
-          onPageChange(page - 1)
-        } else {
-          retry()
-        }
-        return
-      }
-
-      const problem = await response.json().catch(() => null)
-      const messages: Record<number, string> = {
-        401: 'Sesija nebegalioja. Prisijunk iš naujo.',
-        403: 'Neturi teisės pašalinti šio pateikėjo.',
-        409: 'Šio pateikėjo dabar pašalinti negalima.',
-      }
-
+    } catch (error) {
       setDeleteError(
-        problem?.detail ||
-        messages[response.status] ||
-        `Pateikėjo pašalinti nepavyko (HTTP ${response.status}).`,
-      )
-    } catch {
-      setDeleteError(
-        'Nepavyko gauti serverio atsakymo. Prieš kartodamas veiksmą atnaujink sąrašą.',
+        error instanceof TypeError
+          ? 'Nepavyko gauti serverio atsakymo. Prieš kartodamas veiksmą atnaujink sąrašą.'
+          : error instanceof Error
+            ? error.message
+            : 'Pateikėjo pašalinti nepavyko.',
       )
     } finally {
       setDeleting(false)
@@ -177,56 +150,56 @@ export default function MyPerformerResults({
             totalPages={Number(data.totalPages)}
             onPageChange={onPageChange}
           />
-
-          <p role="status" className="mt-3 text-sm text-muted">
-            {notice}
-          </p>
-
-          <dialog
-            ref={deleteDialog}
-            aria-labelledby="delete-performer-title"
-            aria-describedby="delete-performer-description"
-            onCancel={(event) => {
-              if (deleting) event.preventDefault()
-            }}
-            onClose={() => setSelected(null)}
-            className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl
-                      border border-line bg-surface p-5 text-ink backdrop:bg-black/60 md:p-7"
-          >
-            <h2 id="delete-performer-title" className="text-xl font-semibold">
-              Pašalinti pateikėją?
-            </h2>
-
-            <p id="delete-performer-description" className="mt-3 wrap-anywhere">
-              Ar pašalinti pateikėją „{selected?.name}“?
-            </p>
-
-            {deleteError && <p role="alert" className="mt-3 text-sm">{deleteError}</p>}
-
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                autoFocus
-                disabled={deleting}
-                onClick={() => deleteDialog.current?.close()}
-                className="min-h-11 rounded-lg border border-field-border px-4 hover:bg-hover"
-              >
-                Atšaukti
-              </button>
-
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={deletePerformer}
-                className="min-h-11 rounded-lg bg-red-700 px-4 font-semibold text-white
-                          hover:bg-red-800 disabled:opacity-60"
-              >
-                {deleting ? 'Šalinama…' : 'Pašalinti'}
-              </button>
-            </div>
-          </dialog>
         </>
       )}
+
+      <p role="status" className="mt-3 text-sm text-muted">
+        {notice}
+      </p>
+
+      <dialog
+        ref={deleteDialog}
+        aria-labelledby="delete-performer-title"
+        aria-describedby="delete-performer-description"
+        onCancel={(event) => {
+          if (deleting) event.preventDefault()
+        }}
+        onClose={() => setSelected(null)}
+        className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl
+                  border border-line bg-surface p-5 text-ink backdrop:bg-black/60 md:p-7"
+      >
+        <h2 id="delete-performer-title" className="text-xl font-semibold">
+          Pašalinti pateikėją?
+        </h2>
+
+        <p id="delete-performer-description" className="mt-3 wrap-anywhere">
+          Ar pašalinti pateikėją „{selected?.name}“?
+        </p>
+
+        {deleteError && <p role="alert" className="mt-3 text-sm">{deleteError}</p>}
+
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            autoFocus
+            disabled={deleting}
+            onClick={() => deleteDialog.current?.close()}
+            className="min-h-11 rounded-lg border border-field-border px-4 hover:bg-hover"
+          >
+            Atšaukti
+          </button>
+
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={deletePerformer}
+            className="min-h-11 rounded-lg bg-red-700 px-4 font-semibold text-white
+                      hover:bg-red-800 disabled:opacity-60"
+          >
+            {deleting ? 'Šalinama…' : 'Pašalinti'}
+          </button>
+        </div>
+      </dialog>
     </>
   )
 }
