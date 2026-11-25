@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import PerformerDialog, { type EditablePerformer } from './PerformerDialog'
@@ -10,24 +9,29 @@ type MyPerformersData = {
   totalPages: number | string
 }
 
-export default function MyPerformersPage({ token }: { token: string }) {
-  const [page, setPage] = useState(1)
+type MyPerformerResultsProps = {
+  token: string
+  page: number
+  onPageChange: (page: number) => void
+  revision: number
+}
+
+export default function MyPerformerResults({
+  token,
+  page,
+  onPageChange,
+  revision,
+}: MyPerformerResultsProps) {
   const { catalog, showLoading, retry } = useCatalogResults<MyPerformersData>(
     `/api/Performers/mine?page=${page}&pageSize=10`,
     token,
+    revision,
   )
 
   const { data, status } = catalog
 
   return (
-    <main className="mx-auto w-full max-w-308 flex-1 px-4 pt-6 pb-8 md:pt-8">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-accent md:text-3xl">
-          Mano pateikėjai
-        </h1>
-        <PerformerDialog token={token} onSaved={retry} />
-      </div>
-
+    <>
       {status === 'error' ? (
         <div className="my-3">
           <p role="alert">{catalog.message}</p>
@@ -82,10 +86,10 @@ export default function MyPerformersPage({ token }: { token: string }) {
           <Pagination
             page={Number(data.page)}
             totalPages={Number(data.totalPages)}
-            onPageChange={setPage}
+            onPageChange={onPageChange}
           />
         </>
       )}
-    </main>
+    </>
   )
 }

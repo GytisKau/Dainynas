@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useLocation } from 'react-router'
 import { ArchiveMedia } from '../songs/ArchiveMedia'
 import type { PerformerDetails } from '../songs/types'
 import { useApiResource } from '../songs/useApiResource'
@@ -16,6 +16,12 @@ type PerformerProfile = PerformerDetails & {
 }
 
 export default function PerformerProfilePage() {
+  const location = useLocation()
+  const catalogSearch = location.state?.catalogSearch
+  const catalogLink = {
+    pathname: '/pateikejai',
+    search: typeof catalogSearch === 'string' ? catalogSearch : '',
+  }
   const { performerId } = useParams()
   const profile = useApiResource<PerformerProfile>(
     `/api/Performers/${encodeURIComponent(performerId ?? '')}/profile`,
@@ -26,7 +32,7 @@ export default function PerformerProfilePage() {
       <nav aria-label="Naršymo kelias" className="mb-5 text-sm">
         <ol className="flex flex-wrap items-baseline gap-2">
           <li>
-            <Link to="/pateikejai" className="text-accent underline underline-offset-4">
+            <Link to={catalogLink} className="text-accent underline underline-offset-4">
               Pateikėjų katalogas
             </Link>
           </li>

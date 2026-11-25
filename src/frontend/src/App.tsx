@@ -11,7 +11,6 @@ import AlbumPage from './albums/AlbumPage'
 import PerformerCatalogPage from './performers/PerformerCatalogPage'
 import PerformerProfilePage from './performers/PerformerProfilePage'
 import AlbumCatalogPage from './albums/AlbumCatalogPage'
-import MyPerformersPage from './performers/MyPerformersPage'
 
 export default function App() {
   const { session, saveSession, logout, loggingOut, message, restoreFailed, restoring } = useAuthSession()
@@ -63,12 +62,6 @@ export default function App() {
         <Route path="/pateikejai/:performerId" element={<PerformerProfilePage />} />
         <Route path="/albumai" element={<AlbumCatalogPage />} />
         <Route path="/albumai/:albumId" element={<AlbumPage />} />
-
-        <Route path="/mano-pateikejai" element={ session
-              ? <MyPerformersPage token={session.token} />
-              : <Navigate to="/prisijungti" replace />
-          }
-        />
 
         <Route path="/prisijungti" element={ session
             ? <Navigate to="/" replace />

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useSearchParams, useLocation } from 'react-router'
 import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import type { PerformerDetails } from '../songs/types'
-import CreatePerformerDialog from './PerformerDialog'
+import MyPerformerResults from './MyPerformerResults'
+import PerformerDialog from './PerformerDialog'
 
 type PerformerItem = PerformerDetails & {
   id: number | string
@@ -17,7 +18,10 @@ type PerformerPage = {
   totalPages: number | string
 }
 
+type View = 'public' | 'mine'
+
 type Search = {
+  view: View
   name: string
   page: number
 }
@@ -26,7 +30,7 @@ function readSearch(params: URLSearchParams): Search | string {
   const seen = new Set<string>()
 
   for (const key of params.keys()) {
-    if (key !== 'name' && key !== 'page') {
+    if (!['rodinys', 'name', 'page'].includes(key)) {
       return `Nežinomas pateikėjų katalogo parametras „${key}“.`
     }
     if (seen.has(key)) {
@@ -35,12 +39,22 @@ function readSearch(params: URLSearchParams): Search | string {
     seen.add(key)
   }
 
+  const viewParam = params.get('rodinys')
+  if (viewParam !== null && viewParam !== 'mano') {
+    return 'Nežinomas katalogo rodinys.'
+  }
+
   const rawPage = params.get('page') ?? '1'
   if (!/^[1-9]\d*$/.test(rawPage) || Number(rawPage) > 2147483647) {
     return 'Puslapio numeris turi būti teigiamas sveikasis skaičius iki 2147483647.'
   }
 
+  if (viewParam === 'mano' && params.has('name')) {
+    return 'Paieška pagal vardą galima viešame kataloge.'
+  }
+
   return {
+    view: viewParam === 'mano' ? 'mine' : 'public',
     name: params.get('name')?.trim() ?? '',
     page: Number(rawPage),
   }
@@ -48,13 +62,25 @@ function readSearch(params: URLSearchParams): Search | string {
 
 export default function PerformerCatalogPage({ token }: { token: string | null }) {
   const [params, setParams] = useSearchParams()
+  const [revision, setRevision] = useState(0)
   const search = readSearch(params)
 
   function navigate(next: Search) {
     const nextParams = new URLSearchParams()
-    if (next.name) nextParams.set('name', next.name)
+
+    if (next.view === 'mine') nextParams.set('rodinys', 'mano')
+    if (next.view === 'public' && next.name) nextParams.set('name', next.name)
     if (next.page > 1) nextParams.set('page', String(next.page))
+
     setParams(nextParams)
+  }
+
+  function handleCreated() {
+    if (typeof search !== 'string' && search.view === 'mine' && search.page === 1) {
+      setRevision((previous) => previous + 1)
+    } else {
+      navigate({ view: 'mine', name: '', page: 1 })
+    }
   }
 
   return (
@@ -64,30 +90,85 @@ export default function PerformerCatalogPage({ token }: { token: string | null }
           Pateikėjų katalogas
         </h1>
 
-        {token && <CreatePerformerDialog token={token} />}
+        {token && <PerformerDialog token={token} onSaved={handleCreated} />}
       </div>
 
       {typeof search === 'string' ? (
         <>
           <p role="alert">{search}</p>
           <Link to="/pateikejai" className="mt-3 inline-block text-accent underline">
-            Išvalyti parametrus
+            Atverti viešą katalogą
           </Link>
         </>
       ) : (
         <>
-          <PerformerSearchForm
-            key={search.name}
-            initialName={search.name}
-            onSearch={(name) => navigate({ name, page: 1 })}
-          />
-          <PerformerResults
-            search={search}
-            onPageChange={(page) => navigate({ ...search, page })}
-          />
+          {token && <ViewNavigation view={search.view} />}
+
+          {search.view === 'public' ? (
+            <>
+              <PerformerSearchForm
+                key={search.name}
+                initialName={search.name}
+                onSearch={(name) => navigate({ view: 'public', name, page: 1 })}
+              />
+              <PerformerResults
+                search={search}
+                onPageChange={(page) => navigate({ ...search, page })}
+              />
+            </>
+          ) : token ? (
+            <MyPerformerResults
+              token={token}
+              page={search.page}
+              revision={revision}
+              onPageChange={(page) => navigate({ ...search, page })}
+            />
+          ) : (
+            <div className="space-y-3">
+              <p>Prisijunk, kad matytum savo pateikėjus.</p>
+              <Link to="/prisijungti" className="text-accent underline">
+                Prisijungti
+              </Link>
+              <Link to="/pateikejai" className="ml-4 text-accent underline">
+                Vieši pateikėjai
+              </Link>
+            </div>
+          )}
         </>
       )}
     </main>
+  )
+}
+
+function ViewNavigation({ view }: { view: View }) {
+  const options = [
+    { view: 'public', label: 'Vieši', to: '/pateikejai' },
+    { view: 'mine', label: 'Mano', to: '/pateikejai?rodinys=mano' },
+  ] as const
+
+  return (
+    <nav aria-label="Pateikėjų katalogo rodinys" className="mb-4">
+      <div className="inline-flex gap-1 rounded-xl border border-line bg-chrome p-1">
+        {options.map((option) => {
+          const active = option.view === view
+
+          return (
+            <Link
+              key={option.view}
+              to={option.to}
+              aria-current={active ? 'page' : undefined}
+              className={`inline-flex min-h-11 items-center rounded-lg px-4 text-sm ${
+                active
+                  ? 'bg-surface font-semibold text-accent dark:bg-white dark:text-neutral-900'
+                  : 'text-muted hover:bg-hover hover:text-ink'
+              }`}
+            >
+              {option.label}
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
 
@@ -135,6 +216,8 @@ type ResultsProps = {
 }
 
 function PerformerResults({ search, onPageChange }: ResultsProps) {
+  const location = useLocation()
+
   const params = new URLSearchParams({
     page: String(search.page),
     pageSize: '10',
@@ -208,6 +291,7 @@ function PerformerResults({ search, onPageChange }: ResultsProps) {
           <li key={performer.id}>
             <Link
               to={`/pateikejai/${performer.id}`}
+              state={{catalogSearch: location.search}}
               className="grid gap-0.5 px-4 py-3 wrap-anywhere transition-colors hover:bg-hover focus-visible:bg-hover focus-visible:-outline-offset-2"
             >
               {performer.residence && (

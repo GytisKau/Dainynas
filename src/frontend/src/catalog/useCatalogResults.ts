@@ -28,7 +28,11 @@ async function readCatalogError(response: Response): Promise<string> {
   return 'Serveris atmetė paieškos parametrus. Patikrink filtrus.'
 }
 
-export function useCatalogResults<T>(url: string, token?: string) {
+export function useCatalogResults<T>(
+  url: string,
+  token?: string,
+  revision = 0,
+) {
   const [catalog, setCatalog] = useState<CatalogState<T>>({
     status: 'loading',
     data: null,
@@ -88,7 +92,7 @@ export function useCatalogResults<T>(url: string, token?: string) {
       controller.abort()
       window.clearTimeout(timer)
     }
-  }, [url, token, attempt])
+  }, [url, token, attempt, revision])
 
   function retry() {
     setAttempt((previous) => previous + 1)
