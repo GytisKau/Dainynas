@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState  } from 'react'
 
 type CatalogState<T> = {
   status: 'loading' | 'ready' | 'error'
@@ -33,30 +33,33 @@ export function useCatalogResults<T>(
   token?: string,
   revision = 0,
 ) {
-  const [catalog, setCatalog] = useState<CatalogState<T>>({
-    status: 'loading',
-    data: null,
-  })
-  const [showLoading, setShowLoading] = useState(false)
   const [attempt, setAttempt] = useState(0)
+
+  // Pakartotinis bandymas ar sąrašo atnaujinimas yra nauja užklausa net tuo pačiu URL.
+  const request = useMemo(
+    () => ({ url, token, revision, attempt }),
+    [url, token, revision, attempt],
+  )
+
+  const [result, setResult] = useState<{
+    request: typeof request
+    catalog: CatalogState<T>
+  } | null>(null)
+
+  const [delayedRequest, setDelayedRequest] = useState<typeof request | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
-
-    setShowLoading(false)
-    setCatalog((previous) => ({
-      status: 'loading',
-      data: previous.data,
-    }))
-
-    const timer = window.setTimeout(() => setShowLoading(true), 250)
+    const timer = window.setTimeout(() => setDelayedRequest(request), 250)
 
     async function load() {
       try {
-        const response = await fetch(url, {
+        const response = await fetch(request.url, {
           headers: {
             Accept: 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(request.token
+              ? { Authorization: `Bearer ${request.token}` }
+              : {}),
           },
           signal: controller.signal,
         })
@@ -68,31 +71,40 @@ export function useCatalogResults<T>(
         const data: T = await response.json()
 
         if (!controller.signal.aborted) {
-          setCatalog({ status: 'ready', data })
+          setResult({ request, catalog: { status: 'ready', data } })
         }
       } catch (error) {
         if (!controller.signal.aborted) {
-          setCatalog({
-            status: 'error',
-            data: null,
-            message: error instanceof Error
-              ? error.message
-              : 'Nepavyko įkelti katalogo.',
+          setResult({
+            request,
+            catalog: {
+              status: 'error',
+              data: null,
+              message: error instanceof Error
+                ? error.message
+                : 'Nepavyko įkelti katalogo.',
+            },
           })
         }
       } finally {
         window.clearTimeout(timer)
-        if (!controller.signal.aborted) setShowLoading(false)
       }
     }
 
     void load()
 
     return () => {
-      controller.abort()
       window.clearTimeout(timer)
+      controller.abort()
     }
-  }, [url, token, attempt, revision])
+  }, [request])
+
+  // Kol laukiame naujo atsakymo, ekrane lieka ankstesnio atsakymo eilutės.
+  const catalog: CatalogState<T> = result?.request === request
+    ? result.catalog
+    : { status: 'loading', data: result?.catalog.data ?? null }
+
+  const showLoading = catalog.status === 'loading' && delayedRequest === request
 
   function retry() {
     setAttempt((previous) => previous + 1)

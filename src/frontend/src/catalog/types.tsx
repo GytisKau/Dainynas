@@ -30,3 +30,13 @@ export const emptyFilters: SongFilters = {
   performerId: '',
 }
 
+export type PerformerOption = {
+  id: number | string
+  name: string
+}
+
+export type SongSearchFormProps = {
+  activeFilterCount: number
+  initialFilters: SongFilters
+  onSearch: (filters: SongFilters) => void
+}
