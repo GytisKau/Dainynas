@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import { removePerformer } from './performerApi'
 import { useToast } from '../components/useToast'
 import Pagination from '../catalog/Pagination'
 import PerformerDialog, { type EditablePerformer } from './PerformerDialog'
-import PerformerPublicationButton from './PerformerPublicationButton'
+import PerformerRowActions from './PerformerRowActions'
 
 type MyPerformersData = {
   items: EditablePerformer[]
@@ -32,6 +33,7 @@ export default function MyPerformerResults({
   onPageChange,
   revision,
 }: MyPerformerResultsProps) {
+  const location = useLocation()
   const { catalog, showLoading, retry } = useCatalogResults<MyPerformersData>(
     `/api/Performers/mine?page=${page}&pageSize=10`,
     token,
@@ -124,40 +126,42 @@ export default function MyPerformerResults({
             {data.items.map((performer) => (
               <li
                 key={performer.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center"
               >
-                <div className="min-w-0 wrap-anywhere">
-                  <p className="text-xs font-medium text-accent">
+                <Link
+                  to={`/pateikejai/${performer.id}`}
+                  state={{ catalogSearch: location.search }}
+                  className="grid min-w-0 self-stretch content-center gap-0.5
+                            rounded-lg px-4 py-3 wrap-anywhere transition-colors
+                            hover:bg-hover focus-visible:bg-hover focus-visible:-outline-offset-2"
+                >
+                  <span className="text-xs font-medium text-accent">
                     {publicationLabels[performer.publicationStatus] ?? performer.publicationStatus}
-                  </p>
-                  <p className="font-semibold">{performer.name}</p>
+                  </span>
+
+                  <span className="font-semibold text-ink">{performer.name}</span>
+
                   {performer.residence && (
-                    <p className="text-muted">{performer.residence}</p>
+                    <span className="text-muted">{performer.residence}</span>
                   )}
-                </div>
+                </Link>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <PerformerDialog token={token} performer={performer} onSaved={retry} />
-                  
-                  <PerformerPublicationButton
-                    performer={performer}
+                <div className="pr-2">
+                  <PerformerDialog
                     token={token}
-                    disabled={status === 'loading'}
-                    onChanged={retry}
+                    performer={performer}
+                    onSaved={retry}
+                    renderTrigger={(openEdit) => (
+                      <PerformerRowActions
+                        performer={performer}
+                        token={token}
+                        disabled={status === 'loading'}
+                        onEdit={openEdit}
+                        onDelete={() => confirmDelete(performer)}
+                        onChanged={retry}
+                      />
+                    )}
                   />
-
-                  { performer.publicationStatus === 'Draft' && (
-                  <button
-                    type="button"
-                    disabled={status === 'loading'}
-                    aria-label={`Pašalinti pateikėją ${performer.name}`}
-                    onClick={() => confirmDelete(performer)}
-                    className="min-h-11 rounded-lg px-3 text-sm font-medium text-ink
-                              hover:bg-hover disabled:opacity-60"
-                  >
-                    Pašalinti
-                  </button>
-                  )}
                 </div>
               </li>
             ))}

@@ -5,9 +5,10 @@ type Resource<T> =
   | { status: 'ready'; data: T }
   | { status: 'error'; statusCode: number | null }
 
-export function useApiResource<T>(url: string): Resource<T> {
+export function useApiResource<T>(url: string, token?: string): Resource<T> {
   const [result, setResult] = useState<{
     url: string
+    token?: string
     resource: Resource<T>
   } | null>(null)
 
@@ -17,7 +18,10 @@ export function useApiResource<T>(url: string): Resource<T> {
     async function load() {
       try {
         const response = await fetch(url, {
-          headers: { Accept: 'application/json' },
+          headers: { 
+            Accept: 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}) 
+            },
           signal: controller.signal,
         })
 
@@ -31,19 +35,22 @@ export function useApiResource<T>(url: string): Resource<T> {
         }
 
         if (!controller.signal.aborted) {
-          setResult({ url, resource })
+          setResult({ url, token, resource })
         }
       } catch {
         if (!controller.signal.aborted) {
-          setResult({ url, resource: { status: 'error', statusCode: null } })
+          setResult({ url, token, resource: { status: 'error', statusCode: null } })
         }
       }
     }
 
     void load()
     return () => controller.abort()
-  }, [url])
+  }, [url, token])
 
-  if (result?.url === url) return result.resource
+  if (result && result.url === url && result.token === token) {
+    return result.resource
+  }
+
   return { status: 'loading' }
 }

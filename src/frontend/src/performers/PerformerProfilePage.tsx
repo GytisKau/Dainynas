@@ -15,7 +15,7 @@ type PerformerProfile = PerformerDetails & {
   songs: ProfileSong[]
 }
 
-export default function PerformerProfilePage() {
+export default function PerformerProfilePage({ token }: { token?: string }) {
   const location = useLocation()
   const catalogSearch = location.state?.catalogSearch
   const catalogLink = {
@@ -25,6 +25,7 @@ export default function PerformerProfilePage() {
   const { performerId } = useParams()
   const profile = useApiResource<PerformerProfile>(
     `/api/Performers/${encodeURIComponent(performerId ?? '')}/profile`,
+    token,
   )
 
   return (

@@ -1,5 +1,5 @@
-import { useRef, useState, useId } from 'react'
-import type { SubmitEvent } from 'react'
+import { useRef, useState, useId, useEffect } from 'react'
+import type { SubmitEvent, ReactNode } from 'react'
 
 import type { PerformerDetails } from '../songs/types'
 import { useToast } from '../components/useToast'
@@ -8,8 +8,8 @@ const fieldClass =
   'min-h-11 w-full rounded-lg border border-field-border bg-field px-3 text-ink'
 
 const primaryButton =
-  'min-h-11 rounded-lg bg-accent px-4 font-semibold text-on-accent ' +
-  'transition-colors hover:bg-accent-hover disabled:opacity-60'
+  'min-h-11 cursor-pointer rounded-lg bg-accent px-4 font-semibold text-on-accent ' +
+  'transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60'
 
 export type EditablePerformer = PerformerDetails & {
   id: number | string
@@ -20,25 +20,42 @@ type PerformerDialogProps = {
   token: string
   performer?: EditablePerformer
   onSaved?: () => void
+  renderTrigger?: (open: () => void) => ReactNode
 }
 
 export default function PerformerDialog({
   token,
   performer,
   onSaved,
+  renderTrigger
 }: PerformerDialogProps) {
   const titleId = useId()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const notify = useToast()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
 
-  
+  const proposingChanges = performer?.publicationStatus === 'Published'
+
   function openDialog() {
     setError('')
-    dialogRef.current?.querySelector('form')?.reset()
-    dialogRef.current?.showModal()
+    setIsOpen(true)
   }
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    dialog.querySelector('form')?.reset()
+    dialog.showModal()
+
+    return () => {
+      if (dialog.open) dialog.close()
+    }
+  }, [isOpen])
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -89,6 +106,16 @@ export default function PerformerDialog({
           409: 'Pakeitimų šiuo metu išsaugoti negalima.',
         }
 
+        if (
+          response.status === 409 &&
+          problem?.message === 'Performer is awaiting moderation.'
+        ) {
+          setError(
+            'Pateikėjas jau laukia moderatoriaus sprendimo. Užverk formą ir atnaujink sąrašą.',
+          )
+          return
+        }
+
         setError(
           problem?.detail ||
           messages[response.status] ||
@@ -122,13 +149,20 @@ export default function PerformerDialog({
 
   return (
     <div>
-      <button type="button" onClick={openDialog} className={primaryButton}>
-        {performer ? 'Redaguoti' : 'Pridėti pateikėją'}
-      </button>
+      {renderTrigger ? (
+        renderTrigger(openDialog)
+      ) : (
+        <button type="button" onClick={openDialog} className={primaryButton}>
+          {performer ? 'Redaguoti' : 'Pridėti pateikėją'}
+        </button>
+      )}
 
       <dialog
         ref={dialogRef}
         aria-labelledby={titleId}
+        onClose={(event) => {
+          if (!event.currentTarget.open) setIsOpen(false)
+        }}
         onCancel={(event) => {
           if (saving) event.preventDefault()
         }}
@@ -137,8 +171,18 @@ export default function PerformerDialog({
                    text-ink backdrop:bg-black/60 md:p-7"
       >
         <h2 id={titleId} className="text-xl font-semibold">
-          {performer ? 'Redaguoti pateikėją' : 'Naujas pateikėjas'}
+          {proposingChanges
+            ? 'Siūlyti pateikėjo pakeitimus'
+            : performer
+              ? 'Redaguoti pateikėją'
+              : 'Naujas pateikėjas'}
         </h2>
+
+        {proposingChanges && (
+          <p className="mt-2 text-sm text-muted">
+            Pakeitimai taps vieši, kai juos patvirtins moderatorius.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-5 grid gap-4">
           <label className="grid gap-1">
@@ -187,7 +231,11 @@ export default function PerformerDialog({
               Atšaukti
             </button>
             <button type="submit" disabled={saving} className={primaryButton}>
-              {saving ? 'Išsaugoma…' : 'Išsaugoti'}
+              {saving
+                ? 'Siunčiama…'
+                : proposingChanges
+                  ? 'Pateikti pakeitimus'
+                  : 'Išsaugoti'}
             </button>
           </div>
         </form>

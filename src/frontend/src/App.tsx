@@ -59,7 +59,9 @@ export default function App() {
         <Route path="/" element={<SongCatalogPage />} />
         <Route path="/dainos/:songId" element={<SongPage />} />
         <Route path="/pateikejai" element={<PerformerCatalogPage token={session?.token ?? null} />} />
-        <Route path="/pateikejai/:performerId" element={<PerformerProfilePage />} />
+        <Route path="/pateikejai/:performerId" element={
+          <PerformerProfilePage token={session?.token} />
+        }/>
         <Route path="/albumai" element={<AlbumCatalogPage />} />
         <Route path="/albumai/:albumId" element={<AlbumPage />} />
 

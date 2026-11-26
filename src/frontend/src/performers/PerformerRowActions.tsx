@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import RowActions, { type RowAction } from '../components/RowActions'
 import { useToast } from '../components/useToast'
 import { changePerformerPublication } from './performerApi'
 import type { EditablePerformer } from './PerformerDialog'
@@ -7,33 +8,29 @@ type Props = {
   performer: EditablePerformer
   token: string
   disabled: boolean
+  onEdit: () => void
+  onDelete: () => void
   onChanged: () => void
 }
 
-export default function PerformerPublicationButton({
+export default function PerformerRowActions({
   performer,
   token,
   disabled,
+  onEdit,
+  onDelete,
   onChanged,
 }: Props) {
   const notify = useToast()
   const [pending, setPending] = useState(false)
-
   const { id, name, publicationStatus } = performer
-  if (publicationStatus !== 'Draft' && publicationStatus !== 'Published') {
-    return null
-  }
 
-  const action = publicationStatus === 'Draft' ? 'submit' : 'unpublish'
-  const label = action === 'submit' ? 'Pateikti peržiūrai' : 'Atšaukti paskelbimą'
-
-  async function handleClick() {
-    if (pending || disabled) return
+  async function publish(action: 'submit' | 'unpublish') {
+    if (disabled || pending) return
     setPending(true)
 
     try {
       await changePerformerPublication(id, action, token)
-
       notify(
         'success',
         action === 'submit'
@@ -55,17 +52,38 @@ export default function PerformerPublicationButton({
     }
   }
 
+  const actions: RowAction[] = []
+
+  if (publicationStatus === 'Draft') {
+    actions.push(
+      { icon: 'edit', label: 'Redaguoti', onSelect: onEdit },
+      {
+        icon: 'submit',
+        label: 'Pateikti peržiūrai',
+        onSelect: () => void publish('submit'),
+      },
+      { icon: 'delete', label: 'Pašalinti', onSelect: onDelete },
+    )
+  }
+
+  if (publicationStatus === 'Published') {
+    actions.push(
+      { icon: 'edit', label: 'Siūlyti pakeitimus', onSelect: onEdit },
+      {
+        icon: 'unpublish',
+        label: 'Atšaukti paskelbimą',
+        onSelect: () => void publish('unpublish'),
+      },
+    )
+  }
+
+  if (actions.length === 0) return null
+
   return (
-    <button
-      type="button"
-      disabled={pending || disabled}
-      aria-label={`${label}: ${name}`}
-      onClick={handleClick}
-      className="min-h-11 rounded-lg border border-field-border px-3
-                 text-sm font-medium text-ink transition-colors
-                 hover:bg-hover disabled:opacity-60"
-    >
-      {pending ? 'Siunčiama…' : label}
-    </button>
+    <RowActions
+      label={`Pateikėjo „${name}“ veiksmai`}
+      actions={actions}
+      disabled={disabled || pending}
+    />
   )
 }

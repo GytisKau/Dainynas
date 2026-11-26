@@ -66,3 +66,21 @@
       transition-[color,box-shadow];
   }
 }
+
+@layer components {
+  .row-actions-popover {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    margin-block: 0.25rem;
+
+    position-area: block-end span-inline-start;
+    justify-self: end;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+
+    inline-size: max-content;
+    max-inline-size: calc(100vw - 1rem);
+    max-block-size: calc(100dvh - 1rem);
+    overflow-y: auto;
+  }
+}
