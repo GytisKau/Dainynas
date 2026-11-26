@@ -20,4 +20,5 @@ export type SongComment = {
   authorName?: string | null
   text: string
   createdAt: string
+  links?: Partial<Record<'update' | 'delete', { href: string; method: string }>>
 }

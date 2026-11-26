@@ -63,44 +63,7 @@ public class CommentsController(DainynasDbContext context) : ControllerBase
             c.Song.Performer.PublicationStatus == PublicationStatus.Published);
     }
 
-    private CommentDto ToDto(Comment comment)
-    {
-        var dto = new CommentDto
-        {
-            Id = comment.Id,
-            Text = comment.Text,
-            AuthorName = comment.AuthorName,
-            CreatedAt = comment.CreatedAt,
-            SongId = comment.SongId
-        };
-
-        dto.Links["self"] = new LinkDto
-        {
-            Href = $"/api/comments/{comment.Id}"
-        };
-
-        dto.Links["song"] = new LinkDto
-        {
-            Href = $"/api/songs/{comment.SongId}"
-        };
-
-        if (User.CanManage(comment.UserId))
-        {
-            dto.Links["update"] = new LinkDto
-            {
-                Href = $"/api/comments/{comment.Id}",
-                Method = "PUT"
-            };
-
-            dto.Links["delete"] = new LinkDto
-            {
-                Href = $"/api/comments/{comment.Id}",
-                Method = "DELETE"
-            };
-        }
-
-        return dto;
-    }
+    private CommentDto ToDto(Comment comment) => comment.ToCommentDto(User);
 
     // ---------------- GET LIST ----------------
 

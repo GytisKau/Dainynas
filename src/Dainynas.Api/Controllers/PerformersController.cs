@@ -126,19 +126,6 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
         };
     }
 
-    private static void AddCommentLinks(CommentDto comment)
-    {
-        comment.Links["self"] = new LinkDto
-        {
-            Href = $"/api/comments/{comment.Id}"
-        };
-
-        comment.Links["song"] = new LinkDto
-        {
-            Href = $"/api/songs/{comment.SongId}"
-        };
-    }
-
     // GET /api/performers
     // Public: only published performers.
     [HttpGet]
@@ -719,20 +706,10 @@ public class PerformersController(DainynasDbContext context) : ControllerBase
             .AsNoTracking()
             .Where(c => c.SongId == songId)
             .OrderByDescending(c => c.CreatedAt)
-            .Select(c => new CommentDto
-            {
-                Id = c.Id,
-                Text = c.Text,
-                AuthorName = c.AuthorName,
-                CreatedAt = c.CreatedAt,
-                SongId = c.SongId
-            })
+            .ThenByDescending(c => c.Id)
             .ToListAsync();
 
-        foreach (var comment in comments)
-            AddCommentLinks(comment);
-
-        return Ok(comments);
+        return Ok(comments.Select(c => c.ToCommentDto(User)).ToList());
     }
 
     private IQueryable<Song> VisibleSongsQuery(int performerId)

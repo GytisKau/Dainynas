@@ -57,7 +57,9 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<SongCatalogPage />} />
-        <Route path="/dainos/:songId" element={<SongPage />} />
+        <Route path="/dainos/:songId" element={
+          <SongPage token={session?.token}/>
+        }/>
         <Route path="/pateikejai" element={<PerformerCatalogPage token={session?.token ?? null} />} />
         <Route path="/pateikejai/:performerId" element={
           <PerformerProfilePage token={session?.token} />

@@ -5,10 +5,11 @@ import { ArchiveMedia } from './ArchiveMedia'
 import { useApiResource } from './useApiResource'
 import type { SongDetails } from './types'
 
-export default function SongPage() {
+export default function SongPage({ token }: { token?: string }) {
   const { songId } = useParams()
   const song = useApiResource<SongDetails>(
     `/api/Songs/${encodeURIComponent(songId ?? '')}`,
+    token,
   )
 
   return (
@@ -44,8 +45,10 @@ export default function SongPage() {
 
           <div className="min-w-0 md:col-span-2">
             <SongComments
+              key={song.data.id}
               performerId={song.data.performerId}
               songId={song.data.id}
+              token={token}
             />
           </div>
         </div>

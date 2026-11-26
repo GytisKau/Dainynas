@@ -6,6 +6,7 @@ import { useToast } from '../components/useToast'
 import Pagination from '../catalog/Pagination'
 import PerformerDialog, { type EditablePerformer } from './PerformerDialog'
 import PerformerRowActions from './PerformerRowActions'
+import DeleteDialog from '../components/DeleteDialog'
 
 type MyPerformersData = {
   items: EditablePerformer[]
@@ -175,49 +176,15 @@ export default function MyPerformerResults({
         </>
       )}
 
-      <dialog
-        ref={deleteDialog}
-        aria-labelledby="delete-performer-title"
-        aria-describedby="delete-performer-description"
-        onCancel={(event) => {
-          if (deleting) event.preventDefault()
-        }}
+      <DeleteDialog
+        dialogRef={deleteDialog}
+        title="Pašalinti pateikėją?"
+        description={`Ar pašalinti pateikėją „${selected?.name ?? ''}“?`}
+        deleting={deleting}
+        error={deleteError}
+        onConfirm={deletePerformer}
         onClose={() => setSelected(null)}
-        className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl
-                  border border-line bg-surface p-5 text-ink backdrop:bg-black/60 md:p-7"
-      >
-        <h2 id="delete-performer-title" className="text-xl font-semibold">
-          Pašalinti pateikėją?
-        </h2>
-
-        <p id="delete-performer-description" className="mt-3 wrap-anywhere">
-          Ar pašalinti pateikėją „{selected?.name}“?
-        </p>
-
-        {deleteError && <p role="alert" className="mt-3 text-sm">{deleteError}</p>}
-
-        <div className="mt-5 flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            autoFocus
-            disabled={deleting}
-            onClick={() => deleteDialog.current?.close()}
-            className="min-h-11 rounded-lg border border-field-border px-4 hover:bg-hover"
-          >
-            Atšaukti
-          </button>
-
-          <button
-            type="button"
-            disabled={deleting}
-            onClick={deletePerformer}
-            className="min-h-11 rounded-lg bg-red-700 px-4 font-semibold text-white
-                      hover:bg-red-800 disabled:opacity-60"
-          >
-            {deleting ? 'Šalinama…' : 'Pašalinti'}
-          </button>
-        </div>
-      </dialog>
+      />
     </>
   )
 }
