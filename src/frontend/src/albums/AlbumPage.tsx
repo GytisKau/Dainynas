@@ -1,11 +1,20 @@
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { useApiResource } from '../songs/useApiResource'
 import type { Album } from './types'
 
-export default function AlbumPage() {
+export default function AlbumPage({ token }: { token?: string }) {
   const { albumId } = useParams()
+  const location = useLocation()
+  const catalogSearch = location.state?.catalogSearch
+
+  const catalogLink = {
+    pathname: '/albumai',
+    search: typeof catalogSearch === 'string' ? catalogSearch : '',
+  }
+
   const result = useApiResource<Album>(
     `/api/Albums/${encodeURIComponent(albumId ?? '')}`,
+    token,
   )
 
   return (
@@ -13,7 +22,7 @@ export default function AlbumPage() {
       <nav aria-label="Naršymo kelias" className="mb-5 text-sm">
         <ol className="flex flex-wrap items-baseline gap-2">
           <li>
-            <Link to="/albumai" className="text-accent underline underline-offset-4">
+            <Link to={catalogLink} className="text-accent underline underline-offset-4">
               Albumų katalogas
             </Link>
           </li>

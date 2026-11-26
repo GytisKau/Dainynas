@@ -4,7 +4,8 @@ import MyPerformerResults from './MyPerformerResults'
 import PerformerDialog from './PerformerDialog'
 import PerformerSearchForm from './PerformerSearchForm'
 import PublicPerformerResults from './PublicPerformerResults'
-import { readSearch, type Search, type View } from './performerQuery'
+import { readSearch, type Search } from './performerQuery'
+import CatalogViewNavigation from '../components/CatalogViewNavigation'
 
 export default function PerformerCatalogPage({ token }: { token: string | null }) {
   const [params, setParams] = useSearchParams()
@@ -50,7 +51,7 @@ export default function PerformerCatalogPage({ token }: { token: string | null }
         </>
       ) : (
         <>
-          {token && <ViewNavigation view={search.view} />}
+          {token && <CatalogViewNavigation path="/pateikejai" view={search.view} />}
 
           {search.view === 'public' ? (
             <>
@@ -85,37 +86,5 @@ export default function PerformerCatalogPage({ token }: { token: string | null }
         </>
       )}
     </main>
-  )
-}
-
-function ViewNavigation({ view }: { view: View }) {
-  const options = [
-    { view: 'public', label: 'Vieši', to: '/pateikejai' },
-    { view: 'mine', label: 'Mano', to: '/pateikejai?rodinys=mano' },
-  ] as const
-
-  return (
-    <nav aria-label="Pateikėjų katalogo rodinys" className="mb-4">
-      <div className="inline-flex gap-1 rounded-xl border border-line bg-chrome p-1">
-        {options.map((option) => {
-          const active = option.view === view
-
-          return (
-            <Link
-              key={option.view}
-              to={option.to}
-              aria-current={active ? 'page' : undefined}
-              className={`inline-flex min-h-11 items-center rounded-lg px-4 text-sm ${
-                active
-                  ? 'bg-surface font-semibold text-accent dark:bg-white dark:text-neutral-900'
-                  : 'text-muted hover:bg-hover hover:text-ink'
-              }`}
-            >
-              {option.label}
-            </Link>
-          )
-        })}
-      </div>
-    </nav>
   )
 }

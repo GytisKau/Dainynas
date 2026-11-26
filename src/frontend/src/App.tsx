@@ -56,17 +56,34 @@ export default function App() {
       )}
 
       <Routes>
+        {/* Dainos */}
         <Route path="/" element={<SongCatalogPage />} />
-        <Route path="/dainos/:songId" element={
-          <SongPage token={session?.token}/>
-        }/>
-        <Route path="/pateikejai" element={<PerformerCatalogPage token={session?.token ?? null} />} />
-        <Route path="/pateikejai/:performerId" element={
-          <PerformerProfilePage token={session?.token} />
-        }/>
-        <Route path="/albumai" element={<AlbumCatalogPage />} />
-        <Route path="/albumai/:albumId" element={<AlbumPage />} />
+        <Route 
+          path="/dainos/:songId" 
+          element={<SongPage token={session?.token}/>}
+        />
 
+        {/* Pateikėjai */}
+        <Route 
+          path="/pateikejai" 
+          element={<PerformerCatalogPage token={session?.token ?? null} />}
+        />
+        <Route 
+          path="/pateikejai/:performerId" 
+          element={<PerformerProfilePage token={session?.token} />}
+        />
+
+        {/* Albumai */}
+        <Route
+          path="/albumai"
+          element={<AlbumCatalogPage token={session?.token} />}
+        />
+        <Route
+          path="/albumai/:albumId"
+          element={<AlbumPage token={session?.token} />}
+        />
+
+        {/* Autentifikacija */}
         <Route path="/prisijungti" element={ session
             ? <Navigate to="/" replace />
             : <AuthPage key="login" mode="login" onAuthenticated={saveSession} />
