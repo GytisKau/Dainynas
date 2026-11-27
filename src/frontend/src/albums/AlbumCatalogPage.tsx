@@ -1,4 +1,5 @@
-import type { SubmitEvent } from 'react'
+import { useState, type SubmitEvent } from 'react'
+import CreateAlbumDialog from './CreateAlbumDialog'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import Pagination from '../catalog/Pagination'
 import { parseCatalogQuery, toCatalogParams } from '../catalog/catalogQuery'
@@ -41,6 +42,22 @@ function readAlbumQuery(params: URLSearchParams) {
 export default function AlbumCatalogPage({ token }: { token?: string }) {
   const [params, setParams] = useSearchParams()
   const parsed = readAlbumQuery(params)
+  const [revision, setRevision] = useState(0)
+
+  function handleCreated() {
+    if (parsed.ok && parsed.mine && parsed.search.page === 1) {
+      setRevision((previous) => previous + 1)
+      return
+    }
+
+    const next = new URLSearchParams({ rodinys: 'mano' })
+
+    if (parsed.ok && parsed.search.pageSize !== 10) {
+      next.set('pageSize', String(parsed.search.pageSize))
+    }
+
+    setParams(next)
+  }
 
   function navigate(search: SongSearch) {
     const next = toCatalogParams(search)
@@ -50,9 +67,13 @@ export default function AlbumCatalogPage({ token }: { token?: string }) {
 
   return (
     <main className="mx-auto w-full max-w-308 flex-1 px-4 pt-6 pb-8 md:pt-8">
-      <h1 className="mb-4 text-2xl font-semibold text-accent md:text-3xl">
-        Albumų katalogas
-      </h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-accent md:text-3xl">
+          Albumų katalogas
+        </h1>
+
+        {token && <CreateAlbumDialog token={token} onCreated={handleCreated} />}
+      </div>
 
       {!parsed.ok ? (
         <>
@@ -84,6 +105,7 @@ export default function AlbumCatalogPage({ token }: { token?: string }) {
               mine={parsed.mine}
               token={parsed.mine ? token : undefined}
               search={parsed.search}
+              revision={revision}
               onNavigate={navigate}
             />
           )}
@@ -97,16 +119,17 @@ type ResultsProps = {
   mine: boolean
   token?: string
   search: SongSearch
+  revision: number
   onNavigate: (next: SongSearch) => void
 }
 
-function AlbumResults({ mine, token, search, onNavigate }: ResultsProps) {
+function AlbumResults({ mine, token, search, revision, onNavigate }: ResultsProps) {
   const location = useLocation()
   const query = toCatalogParams(search).toString()
   const endpoint = mine ? '/api/Albums/mine' : '/api/Albums'
   const url = query ? `${endpoint}?${query}` : endpoint
 
-  const { catalog, showLoading, retry } = useCatalogResults<AlbumPageData>(url, token)
+  const { catalog, showLoading, retry } = useCatalogResults<AlbumPageData>(url, token, revision)
   const { data, status } = catalog
 
   function handleSearch(event: SubmitEvent<HTMLFormElement>) {

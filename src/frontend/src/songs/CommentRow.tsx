@@ -85,13 +85,15 @@ export default function CommentRow({
     )
   }
 
-  const actions: RowAction[] = []
-  if (token && comment.links?.update) {
-    actions.push({ icon: 'edit', label: 'Redaguoti', onSelect: () => setEditing(true) })
-  }
-  if (token && comment.links?.delete) {
-    actions.push({ icon: 'delete', label: 'Pašalinti', onSelect: openDeleteDialog })
-  }
+  const editActions: RowAction[] = token && comment.links?.update
+    ? [{ icon: 'edit', label: 'Redaguoti', onSelect: () => setEditing(true) }]
+    : []
+
+  const actions: RowAction[] = token && comment.links?.delete
+    ? [ ...editActions,
+        { icon: 'delete', label: 'Pašalinti', onSelect: openDeleteDialog },
+      ]
+    : editActions
 
   return (
     <li className="flex items-start justify-between gap-3 py-4">

@@ -1,34 +1,61 @@
-import type { Song } from './types'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
-type SongListProps = {
-  songs: Song[]
-  loading: boolean
+type SongListItem = {
+  id: number | string
+  title: string
+  performerName?: string | null
+  recordingPlace?: string | null
 }
 
-export default function SongList({ songs, loading }: SongListProps) {
+type Props<T extends SongListItem> = {
+  songs: T[]
+  loading: boolean
+  numbered?: boolean
+  renderAction?: (song: T) => ReactNode
+}
+
+export default function SongList<T extends SongListItem>({
+  songs, loading, numbered = false, renderAction,
+}: Props<T>) {
+  const List = numbered ? 'ol' : 'ul'
+
   return (
-    <ul
+    <List
       aria-busy={loading}
-      className="divide-y divide-line rounded-xl border border-line bg-surface overflow-hidden"
+      className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface"
     >
-      {songs.map((song) => (
-        <li key={song.id}>
+      {songs.map((song, index) => (
+        <li
+          key={song.id}
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center"
+        >
           <Link
             to={`/dainos/${song.id}`}
-            className="grid gap-0.5 px-4 py-3 wrap-anywhere transition-colors hover:bg-hover focus-visible:bg-hover focus-visible:-outline-offset-2"
+            className="flex min-w-0 items-baseline gap-3 self-stretch px-4 py-3
+                       transition-colors hover:bg-hover focus-visible:bg-hover
+                       focus-visible:-outline-offset-2"
           >
-            {song.recordingPlace && (
-              <span className="text-xs font-medium text-accent uppercase">
-                {song.recordingPlace}
+            {numbered && (
+              <span aria-hidden="true" className="min-w-5 text-sm text-muted tabular-nums">
+                {index + 1}.
               </span>
             )}
 
-            <span className="font-semibold text-ink">{song.title}</span>
-            <span className="text-muted">{song.performerName}</span>
+            <span className="grid min-w-0 gap-0.5 wrap-anywhere">
+              {song.recordingPlace && (
+                <span className="text-xs font-medium text-accent uppercase">
+                  {song.recordingPlace}
+                </span>
+              )}
+              <span className="font-semibold text-ink">{song.title}</span>
+              {song.performerName && <span className="text-muted">{song.performerName}</span>}
+            </span>
           </Link>
+
+          {renderAction && <div className="pr-2">{renderAction(song)}</div>}
         </li>
       ))}
-    </ul>
+    </List>
   )
 }

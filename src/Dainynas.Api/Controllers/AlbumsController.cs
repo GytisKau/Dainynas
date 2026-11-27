@@ -356,6 +356,110 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             ToDto(saved));
     }
 
+    [Authorize]
+    [HttpPut("{id:int}/songs/{songId:int}")]
+    [ProducesResponseType(typeof(AlbumDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AlbumDto>> AddSong(int id, int songId)
+    {
+        var userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        var album = await _context.Albums
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Albums"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
+
+        if (album is null) return NotFound();
+        if (!User.CanManage(album.OwnerId)) return Forbid();
+
+        if (album.PublicationStatus != PublicationStatus.Draft)
+            return Conflict(new { message = "Only draft albums can be edited directly." });
+
+        var error = await ValidateSongIds([songId], userId.Value, requirePublished: false);
+        if (error is not null) return BadRequest(new { message = error });
+
+        var entries = _context.AlbumSongs.Where(entry => entry.AlbumId == id);
+
+        // Pakartojus tą pačią užklausą daina išlaiko savo poziciją.
+        if (!await entries.AnyAsync(entry => entry.SongId == songId))
+        {
+            var lastPosition = await entries.MaxAsync(entry => (int?)entry.Position) ?? 0;
+
+            _context.AlbumSongs.Add(new AlbumSong
+            {
+                AlbumId = id,
+                SongId = songId,
+                Position = lastPosition + 1
+            });
+
+            await _context.SaveChangesAsync();
+        }
+
+        var updated = await AlbumsWithSongs().SingleAsync(a => a.Id == id);
+        await transaction.CommitAsync();
+
+        return Ok(ToDto(updated));
+    }
+
+    [Authorize]
+    [HttpDelete("{id:int}/songs/{songId:int}")]
+    [ProducesResponseType(typeof(AlbumDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<AlbumDto>> RemoveSong(int id, int songId)
+    {
+        var userId = User.GetUserId();
+        if (userId is null) return Unauthorized();
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        var album = await _context.Albums
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Albums"
+                WHERE "Id" = {id}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
+
+        if (album is null) return NotFound();
+        if (!User.CanManage(album.OwnerId)) return Forbid();
+
+        if (album.PublicationStatus != PublicationStatus.Draft)
+            return Conflict(new { message = "Only draft albums can be edited directly." });
+
+        var entry = await _context.AlbumSongs
+            .SingleOrDefaultAsync(x => x.AlbumId == id && x.SongId == songId);
+
+        if (entry is not null)
+        {
+            _context.AlbumSongs.Remove(entry);
+            await _context.SaveChangesAsync();
+
+            // Po pašalintos dainos esančias pozicijas paslenkame per vieną vietą.
+            await _context.AlbumSongs
+                .Where(x => x.AlbumId == id && x.Position > entry.Position)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.Position, x => x.Position - 1));
+        }
+
+        var updated = await AlbumsWithSongs().SingleAsync(a => a.Id == id);
+        await transaction.CommitAsync();
+
+        return Ok(ToDto(updated));
+    }
+
     // ---------------- UPDATE ----------------
 
     [Authorize]

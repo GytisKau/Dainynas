@@ -8,7 +8,11 @@ export type Album = {
   id: number | string
   title: string
   description?: string | null
+  publicationStatus: 'Draft' | 'Pending' | 'Published'
   songs: AlbumSong[]
+  links: {
+    update?: { href: string; method: string }
+  }
 }
 
 export type AlbumPageData = {
