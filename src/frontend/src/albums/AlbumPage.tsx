@@ -6,8 +6,27 @@ import { Link, useLocation, useParams } from 'react-router'
 import { useApiResource } from '../songs/useApiResource'
 import AlbumSongPicker from './AlbumSongPicker'
 import type { Album, AlbumSong } from './types'
+import { changeAlbumPublication, type AlbumPublicationAction } from './albumApi'
 
 export default function AlbumPage({ token }: { token?: string }) {
+  const [revision, setRevision] = useState(0)
+
+  return (
+    <AlbumDetails
+      key={revision}
+      token={token}
+      onReload={() => setRevision((value) => value + 1)}
+    />
+  )
+}
+
+type AlbumDetailsProps = {
+  token?: string
+  onReload: () => void
+}
+
+// Čia prasideda tavo ankstesnės AlbumPage funkcijos turinys.
+function AlbumDetails({ token, onReload }: AlbumDetailsProps) {
   const { albumId } = useParams()
   const location = useLocation()
   const catalogSearch = location.state?.catalogSearch
@@ -52,6 +71,7 @@ export default function AlbumPage({ token }: { token?: string }) {
         <AlbumContent
           key={result.data.id}
           initialAlbum={result.data}
+          onReload={onReload}
           token={token}
         />
       )}
@@ -67,20 +87,27 @@ const statusLabels = {
 
 const cardClass = 'min-w-0 rounded-xl border border-line bg-surface p-5 md:p-6'
 
-type AlbumContentProps = { initialAlbum: Album, token?: string}
+type AlbumContentProps = {
+  initialAlbum: Album
+  token?: string
+  onReload: () => void
+}
 
-function AlbumContent({ initialAlbum, token }: AlbumContentProps) {
+function AlbumContent({ initialAlbum, token, onReload }: AlbumContentProps) {
  const [album, setAlbum] = useState(initialAlbum)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [publishing, setPublishing] = useState(false)
   const notify = useToast()
+  
+  const busy = publishing || savingId !== null
 
   const songs = [...album.songs].sort((a, b) => Number(a.position) - Number(b.position))
   const canEdit = Boolean(token && album.publicationStatus === 'Draft' && album.links.update)
   const showPicker = canEdit && pickerOpen
 
   async function changeSong(song: Pick<AlbumSong, 'id' | 'title'>, add: boolean) {
-    if (!token || !canEdit || savingId !== null) return
+    if (!token || !canEdit || busy) return
 
     setSavingId(String(song.id))
     try {
@@ -116,7 +143,7 @@ function AlbumContent({ initialAlbum, token }: AlbumContentProps) {
 
   async function moveSong(index: number, direction: -1 | 1) {
     const update = album.links.update
-    if (!token || !canEdit || !update || savingId !== null) return
+    if (!token || !canEdit || !update || busy) return
 
     const nextIndex = index + direction
     const song = songs[index]
@@ -181,6 +208,47 @@ function AlbumContent({ initialAlbum, token }: AlbumContentProps) {
     }
   }
 
+  async function publish(action: AlbumPublicationAction) {
+    const link = album.links[action]
+    if (!token || !link || busy) return
+
+    setPublishing(true)
+
+    try {
+      await changeAlbumPublication(link.href, action, token)
+    } catch (error) {
+      notify('error', error instanceof TypeError
+        ? 'Nepavyko gauti atsakymo. Prieš kartodamas veiksmą atnaujink albumą.'
+        : error instanceof Error ? error.message : 'Albumo būsenos pakeisti nepavyko.')
+      setPublishing(false)
+      return
+    }
+
+    notify('success', action === 'submit'
+      ? 'Albumas pateiktas peržiūrai.'
+      : 'Albumo paskelbimas atšauktas. Jis vėl yra juodraštis.')
+
+    onReload()
+  }
+
+  const albumActions: RowAction[] = []
+
+  if (token && album.links.submit) {
+    albumActions.push({
+      icon: 'submit',
+      label: 'Pateikti peržiūrai',
+      onSelect: () => void publish('submit'),
+    })
+  }
+
+  if (token && album.links.unpublish) {
+    albumActions.push({
+      icon: 'unpublish',
+      label: 'Atšaukti paskelbimą',
+      onSelect: () => void publish('unpublish'),
+    })
+  }
+
   function songActions(song: AlbumSong, index: number): RowAction[] {
     const actions: RowAction[] = []
 
@@ -217,12 +285,25 @@ function AlbumContent({ initialAlbum, token }: AlbumContentProps) {
     >
       <div className="grid min-w-0 content-start gap-5">
       <section aria-labelledby="album-title" className={cardClass}>
-        <p className="mb-2 text-sm font-medium text-accent">
-          {statusLabels[album.publicationStatus]}
+        <p role="status" className="mb-2 text-sm font-medium text-accent">
+          {publishing ? 'Keičiama albumo būsena…' : statusLabels[album.publicationStatus]}
         </p>
-        <h1 id="album-title" className="wrap-anywhere text-3xl font-semibold md:text-4xl">
-          {album.title}
-        </h1>
+
+        <div className="flex items-center justify-between gap-3">
+          <h1 id="album-title" className="min-w-0 wrap-anywhere text-3xl font-semibold md:text-4xl">
+            {album.title}
+          </h1>
+
+          {albumActions.length > 0 && (
+            <div className="shrink-0">
+              <RowActions
+                label={`Albumo „${album.title}“ veiksmai`}
+                actions={albumActions}
+                disabled={busy}
+              />
+            </div>
+          )}
+        </div>
         {album.description && (
           <p className="mt-3 max-w-prose wrap-anywhere whitespace-pre-line text-muted">
             {album.description}
@@ -253,7 +334,7 @@ function AlbumContent({ initialAlbum, token }: AlbumContentProps) {
             renderAction={canEdit ? (song, index) => (
               <RowActions
                 label={`Dainos „${song.title}“ veiksmai`}
-                disabled={savingId !== null}
+                disabled={busy}
                 actions={songActions(song, index)}
               />
             ) : undefined}
@@ -263,7 +344,7 @@ function AlbumContent({ initialAlbum, token }: AlbumContentProps) {
     </div>
 
     {showPicker && token && (
-      <aside aria-labelledby="picker-title" className={`${cardClass} h-fit`}>
+      <aside aria-labelledby="picker-title" inert={publishing} className={`${cardClass} h-fit`}>
         <h2 id="picker-title" className="mb-4 text-xl font-semibold">
           Pridėti dainą
         </h2>

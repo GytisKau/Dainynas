@@ -12,9 +12,10 @@ export type Album = {
   description?: string | null
   publicationStatus: 'Draft' | 'Pending' | 'Published'
   songs: AlbumSong[]
-  links: {
-    update?: { href: string; method: string }
-  }
+  links: Partial<Record<'update' | 'submit' | 'unpublish', {
+    href: string
+    method: string
+  }>>
 }
 
 export type AlbumPageData = {
