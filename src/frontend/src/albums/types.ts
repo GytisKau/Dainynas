@@ -1,6 +1,8 @@
 export type AlbumSong = {
   id: number | string
   title: string
+  performerName: string
+  recordingPlace?: string | null
   position: number | string
 }
 

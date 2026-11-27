@@ -6,6 +6,8 @@ const iconPaths = {
   submit: 'M21 3 3 10l7 3 3 8 8-18Z M10 13 21 3',
   unpublish: 'M4 10h10a6 6 0 0 1 0 12 M4 10l5-5 M4 10l5 5',
   delete: 'M3 6h18 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7',
+  moveUp: 'M12 19V5 M6 11l6-6 6 6',
+  moveDown: 'M12 5v14 M6 13l6 6 6-6',
 }
 
 export type RowAction = {

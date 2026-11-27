@@ -83,6 +83,8 @@ public class AlbumsController(DainynasDbContext context) : ControllerBase
             {
                 Id = entry.SongId,
                 Title = entry.Song.Title,
+                PerformerName = entry.Song.Performer.Name,
+                RecordingPlace = entry.Song.RecordingPlace,
                 Position = entry.Position
             };
 

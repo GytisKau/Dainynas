@@ -9,5 +9,9 @@ public class AlbumSongDto
     public string Title { get; set; } = string.Empty;
     public int Position { get; set; }
 
+    public string PerformerName { get; set; } = string.Empty;
+    
+    public string? RecordingPlace { get; set; } 
+
     public Dictionary<string, LinkDto> Links { get; set; } = [];
 }

@@ -95,6 +95,7 @@ function PickerResults({
         <SongList
           songs={data.items}
           loading={catalog.status === 'loading'}
+          compact
           renderAction={(song) => {
             const added = included.has(String(song.id))
             const busy = savingId === String(song.id)
