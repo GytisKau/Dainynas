@@ -1,4 +1,4 @@
-import type { PerformerOption } from './types'
+import type { PerformerOption } from '../performers/types'
 
 type PerformerPage = {
   items: PerformerOption[]

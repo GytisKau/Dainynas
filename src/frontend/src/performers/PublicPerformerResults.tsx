@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router'
 import Pagination from '../catalog/Pagination'
 import { useCatalogResults } from '../catalog/useCatalogResults'
-import type { PerformerDetails } from '../songs/types'
+import type { PerformerDetails } from './types'
 import type { Search } from './performerQuery'
 
 type PerformerItem = PerformerDetails & {

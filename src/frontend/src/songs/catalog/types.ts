@@ -1,9 +1,4 @@
-export type Song = {
-  id: number | string
-  title: string
-  performerName: string
-  recordingPlace?: string | null
-}
+import type { Song } from "../types"
 
 export type SongPage<T extends Song = Song> = {
   items: T[]
@@ -28,15 +23,4 @@ export const emptyFilters: SongFilters = {
   title: '',
   year: '',
   performerId: '',
-}
-
-export type PerformerOption = {
-  id: number | string
-  name: string
-}
-
-export type SongSearchFormProps = {
-  activeFilterCount: number
-  initialFilters: SongFilters
-  onSearch: (filters: SongFilters) => void
 }

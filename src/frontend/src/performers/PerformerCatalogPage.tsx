@@ -5,7 +5,7 @@ import PerformerDialog from './PerformerDialog'
 import PerformerSearchForm from './PerformerSearchForm'
 import PublicPerformerResults from './PublicPerformerResults'
 import { readSearch, type Search } from './performerQuery'
-import CatalogViewNavigation from '../components/CatalogViewNavigation'
+import CatalogViewNavigation from '../catalog/CatalogViewNavigation'
 
 export default function PerformerCatalogPage({ token }: { token: string | null }) {
   const [params, setParams] = useSearchParams()

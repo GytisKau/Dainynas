@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { SubmitEvent } from 'react'
-import type { PerformerOption, SongFilters, SongSearchFormProps } from './types'
+import type { PerformerOption } from '../../performers/types'
+import type { SongSearchFormProps } from './SongSearchForm'
+import type { SongFilters } from './types'
 
 type SongSearchFieldsProps = SongSearchFormProps & {
   performers: PerformerOption[]

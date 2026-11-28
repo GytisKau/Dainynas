@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import CommentForm from './CommentForm'
 
 import type { SongComment } from './types'
-import { useApiResource } from './useApiResource'
+import { useApiResource } from '../hooks/useApiResource'
 import CommentRow from './CommentRow'
 
 type Props = {

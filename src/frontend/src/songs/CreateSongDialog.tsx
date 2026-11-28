@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type SubmitEvent } from 'react'
-import { loadPerformerOptions } from '../catalog/loadPerformerOptions'
-import type { PerformerOption } from '../catalog/types'
+import { loadPerformerOptions } from '../performers/loadPerformerOptions'
+import type { PerformerOption } from '../performers/types'
 import { useToast } from '../components/useToast'
 import type { SongDetails } from './types'
 

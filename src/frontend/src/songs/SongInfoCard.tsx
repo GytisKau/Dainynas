@@ -1,7 +1,8 @@
 import { Link } from 'react-router'
-import type { PerformerDetails, SongDetails } from './types'
-import { useApiResource } from './useApiResource'
+import type { SongDetails } from './types'
+import { useApiResource } from '../hooks/useApiResource'
 import { ArchiveMedia, ArchiveNotice } from './ArchiveMedia'
+import type { PerformerDetails } from '../performers/types'
 
 export default function SongInfoCard({
   song, token,

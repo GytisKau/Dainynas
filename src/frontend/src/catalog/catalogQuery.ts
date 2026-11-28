@@ -1,4 +1,5 @@
-import type { SongSearch } from './types'
+import type { SongSearch } from "../songs/catalog/types";
+
 
 type ParsedQuery =
   | { ok: true; search: SongSearch }

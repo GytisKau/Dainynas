@@ -3,13 +3,13 @@ import CreateAlbumDialog from './CreateAlbumDialog'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import Pagination from '../catalog/Pagination'
 import { parseCatalogQuery, toCatalogParams } from '../catalog/catalogQuery'
-import type { SongSearch } from '../catalog/types'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import type { Album, AlbumPageData } from './types'
-import CatalogViewNavigation from '../components/CatalogViewNavigation'
+import CatalogViewNavigation from '../catalog/CatalogViewNavigation'
 import AlbumStatus from './AlbumStatus'
 import { useAlbumPublication } from './useAlbumPublication'
 import AlbumActions from './AlbumActions'
+import type { SongSearch } from '../songs/catalog/types'
 
 const publicKeys = new Set(['title', 'page', 'pageSize'])
 const mineKeys = new Set(['page', 'pageSize'])

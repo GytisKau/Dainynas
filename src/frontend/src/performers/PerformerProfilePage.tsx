@@ -1,7 +1,7 @@
 import { Link, useParams, useLocation } from 'react-router'
 import { ArchiveMedia } from '../songs/ArchiveMedia'
-import type { PerformerDetails } from '../songs/types'
-import { useApiResource } from '../songs/useApiResource'
+import type { PerformerDetails } from './types'
+import { useApiResource } from '../hooks/useApiResource'
 
 type ProfileSong = {
   id: number | string

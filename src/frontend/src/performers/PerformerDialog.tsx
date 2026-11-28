@@ -1,7 +1,7 @@
 import { useRef, useState, useId, useEffect } from 'react'
 import type { SubmitEvent, ReactNode } from 'react'
 
-import type { PerformerDetails } from '../songs/types'
+import type { PerformerDetails } from '../performers/types'
 import { useToast } from '../components/useToast'
 
 const fieldClass =

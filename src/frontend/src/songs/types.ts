@@ -1,4 +1,9 @@
-import type { Song } from '../catalog/types'
+export type Song = {
+  id: number | string
+  title: string
+  performerName: string
+  recordingPlace?: string | null
+}
 
 export type SongDetails = Song & {
   performerId: number | string
@@ -11,13 +16,6 @@ export type SongDetails = Song & {
     href: string
     method: string
   }>>
-}
-
-export type PerformerDetails = {
-  name: string
-  birthYear?: number | string | null
-  residence?: string | null
-  photoUrl?: string | null
 }
 
 export type SongComment = {

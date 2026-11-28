@@ -6,7 +6,7 @@ import { useAuthSession } from './auth/useAuthSession'
 
 import AuthPage from './auth/AuthPage'
 import SongPage from './songs/SongPage'
-import SongCatalogPage from './catalog/SongCatalogPage'
+import SongCatalogPage from './songs/catalog/SongCatalogPage'
 import AlbumPage from './albums/AlbumPage'
 import PerformerCatalogPage from './performers/PerformerCatalogPage'
 import PerformerProfilePage from './performers/PerformerProfilePage'

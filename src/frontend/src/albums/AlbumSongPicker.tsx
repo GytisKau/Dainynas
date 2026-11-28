@@ -1,10 +1,11 @@
 import { useState, type SubmitEvent } from 'react'
 import Pagination from '../catalog/Pagination'
-import SongList from '../catalog/SongList'
-import type { Song, SongPage } from '../catalog/types'
+import SongList from '../songs/SongList'
 import { useCatalogResults } from '../catalog/useCatalogResults'
-import CatalogViewNavigation from '../components/CatalogViewNavigation'
+import CatalogViewNavigation from '../catalog/CatalogViewNavigation'
 import type { Album } from './types'
+import type { Song } from '../songs/types'
+import type { SongPage } from '../songs/catalog/types'
 
 type Source = 'public' | 'mine'
 

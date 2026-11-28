@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import SongSearchFields from './SongSearchFields'
-import type { PerformerOption, SongSearchFormProps } from './types'
-import { loadPerformerOptions } from './loadPerformerOptions'
+import { loadPerformerOptions } from '../../performers/loadPerformerOptions'
+import type { PerformerOption } from '../../performers/types'
+import type { SongFilters } from './types'
+
+export type SongSearchFormProps = {
+  activeFilterCount: number
+  initialFilters: SongFilters
+  onSearch: (filters: SongFilters) => void
+}
 
 export default function SongSearchForm(props: SongSearchFormProps) {
   const [performers, setPerformers] = useState<PerformerOption[]>([])
