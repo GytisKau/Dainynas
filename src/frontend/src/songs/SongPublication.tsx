@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import RowActions, { type RowAction } from '../components/RowActions'
 import { useToast } from '../components/useToast'
-import type { SongDetails } from './types'
-import { Link } from 'react-router'
+import { songStatusLabels, type SongDetails } from './types'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { SongFormDialog } from './CreateSongDialog'
+import DeleteSongDialog from './DeleteSongDialog'
 
 type Props = {
   song: SongDetails
@@ -12,12 +13,6 @@ type Props = {
 }
 
 type Action = 'submit' | 'unpublish'
-
-const statusLabels = {
-  Draft: 'Juodraštis',
-  Pending: 'Laukia peržiūros',
-  Published: 'Paskelbta',
-} as const
 
 const conflictMessages: Record<string, string> = {
   'Only drafts can be submitted.':
@@ -40,6 +35,9 @@ export default function SongPublication({
   song: current, token, onSongChanged,
 }: Props) {
   const [editing, setEditing] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [needsRefresh, setNeedsRefresh] = useState(false)
   const notify = useToast()
@@ -156,6 +154,14 @@ export default function SongPublication({
     })
   }
 
+  if (token && current.links.delete) {
+    actions.push({
+      icon: 'delete',
+      label: 'Pašalinti dainą',
+      onSelect: () => setConfirmingDelete(true),
+    })
+  }
+
   const waitingForPerformer =
     !needsRefresh &&
     Boolean(token && current.links.update) &&
@@ -181,7 +187,7 @@ export default function SongPublication({
       ) : (
         (actions.length > 0 || current.publicationStatus !== 'Published') && (
           <p role="status" className="mb-2 text-xs font-medium text-accent">
-            {statusLabels[current.publicationStatus]}
+            {songStatusLabels[current.publicationStatus]}
           </p>
         )
       )}
@@ -225,6 +231,25 @@ export default function SongPublication({
             setEditing(false)
             setNeedsRefresh(true)
             void retryRefresh()
+          }}
+        />
+      )}
+
+      {confirmingDelete && token && current.links.delete && (
+        <DeleteSongDialog
+          title={current.title}
+          href={current.links.delete.href}
+          token={token}
+          onClose={() => setConfirmingDelete(false)}
+          onDeleted={() => {
+            const search = location.state?.catalogSearch
+            void navigate(
+              {
+                pathname: '/',
+                search: typeof search === 'string' ? search : '?rodinys=mano',
+              },
+              { replace: true },
+            )
           }}
         />
       )}

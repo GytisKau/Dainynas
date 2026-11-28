@@ -7,7 +7,7 @@ export type SongDetails = Song & {
   audioUrl?: string | null
   externalArchiveUrl?: string | null
   publicationStatus: 'Draft' | 'Pending' | 'Published'
-  links: Partial<Record<'update' | 'submit' | 'unpublish', {
+  links: Partial<Record<'update' | 'submit' | 'unpublish' | 'delete' , {
     href: string
     method: string
   }>>
@@ -27,3 +27,9 @@ export type SongComment = {
   createdAt: string
   links?: Partial<Record<'update' | 'delete', { href: string; method: string }>>
 }
+
+export const songStatusLabels = {
+  Draft: 'Juodraštis',
+  Pending: 'Laukia peržiūros',
+  Published: 'Paskelbta',
+} satisfies Record<SongDetails['publicationStatus'], string>

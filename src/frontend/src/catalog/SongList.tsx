@@ -14,11 +14,12 @@ type Props<T extends SongListItem> = {
   numbered?: boolean
   compact?: boolean
   catalogSearch?: string
+  getStatusLabel?: (song: T) => string
   renderAction?: (song: T, index: number) => ReactNode
 }
 
 export default function SongList<T extends SongListItem>({
-  songs, loading, numbered = false, compact = false, catalogSearch, renderAction,
+  songs, loading, numbered = false, compact = false, catalogSearch, getStatusLabel, renderAction,
 }: Props<T>) {
   const List = numbered ? 'ol' : 'ul'
 
@@ -79,6 +80,12 @@ export default function SongList<T extends SongListItem>({
                 <span className="font-semibold text-ink">{song.title}</span>
                 {song.performerName && (
                   <span className="text-muted">{song.performerName}</span>
+                )}
+
+                {getStatusLabel && (
+                  <span className="text-xs font-medium text-accent">
+                    {getStatusLabel(song)}
+                  </span>
                 )}
               </span>
             )}

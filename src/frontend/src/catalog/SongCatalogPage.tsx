@@ -8,6 +8,10 @@ import type { SongFilters, SongPage, SongSearch } from './types'
 import { useCatalogResults } from './useCatalogResults'
 import { useState } from 'react'
 import CreateSongDialog from '../songs/CreateSongDialog'
+import RowActions, { type RowAction } from '../components/RowActions'
+import { SongFormDialog } from '../songs/CreateSongDialog'
+import DeleteSongDialog from '../songs/DeleteSongDialog'
+import { songStatusLabels, type SongDetails } from '../songs/types'
 
 export default function SongCatalogPage({ token }: { token?: string }) {
   const [params, setParams] = useSearchParams()
@@ -85,6 +89,11 @@ export default function SongCatalogPage({ token }: { token?: string }) {
   )
 }
 
+type SelectedSong = {
+  mode: 'edit' | 'delete'
+  song: SongDetails
+}
+
 type ResultsProps = {
   mine: boolean
   token?: string
@@ -98,8 +107,11 @@ function CatalogResults({ mine, token, search, revision, onNavigate }: ResultsPr
   const query = toCatalogParams(search).toString()
   const endpoint = mine ? '/api/Songs/mine' : '/api/Songs'
   const url = query ? `${endpoint}?${query}` : endpoint
+  const [selected, setSelected] = useState<SelectedSong | null>(null)
 
-  const { catalog, showLoading, retry } = useCatalogResults<SongPage>(url, token, revision)
+  const { catalog, showLoading, retry } =
+    useCatalogResults<SongPage<SongDetails>>(url, token, revision)
+
   const { data, status } = catalog
 
   function handleSearch(filters: SongFilters) {
@@ -109,6 +121,48 @@ function CatalogResults({ mine, token, search, revision, onNavigate }: ResultsPr
       retry()
     } else {
       onNavigate(next)
+    }
+  }
+
+  function renderSongActions(song: SongDetails) {
+    const actions: RowAction[] = []
+
+    if (song.links.update) {
+      actions.push({
+        icon: 'edit',
+        label: song.publicationStatus === 'Published'
+          ? 'Siūlyti pakeitimus'
+          : 'Redaguoti dainą',
+        onSelect: () => setSelected({ mode: 'edit', song }),
+      })
+    }
+
+    if (song.links.delete) {
+      actions.push({
+        icon: 'delete',
+        label: 'Pašalinti dainą',
+        onSelect: () => setSelected({ mode: 'delete', song }),
+      })
+    }
+
+    if (actions.length === 0) return null
+
+    return (
+      <RowActions
+        label={`Dainos „${song.title}“ veiksmai`}
+        actions={actions}
+        disabled={status === 'loading'}
+      />
+    )
+  }
+
+  function handleDeleted() {
+    setSelected(null)
+
+    if (data?.items.length === 1 && search.page > 1) {
+      onNavigate({ ...search, page: search.page - 1 })
+    } else {
+      retry()
     }
   }
 
@@ -162,6 +216,10 @@ function CatalogResults({ mine, token, search, revision, onNavigate }: ResultsPr
           songs={data.items}
           loading={status === 'loading'}
           catalogSearch={location.search}
+          getStatusLabel={mine
+            ? (song) => songStatusLabels[song.publicationStatus]
+            : undefined}
+          renderAction={mine && token ? renderSongActions : undefined}
         />
       )}
 
@@ -181,6 +239,28 @@ function CatalogResults({ mine, token, search, revision, onNavigate }: ResultsPr
         >
           Grįžti į pirmą puslapį
         </button>
+      )}
+
+      {selected?.mode === 'edit' && token && (
+        <SongFormDialog
+          song={selected.song}
+          token={token}
+          onClose={() => setSelected(null)}
+          onSaved={() => {
+            setSelected(null)
+            retry()
+          }}
+        />
+      )}
+
+      {selected?.mode === 'delete' && token && selected.song.links.delete && (
+        <DeleteSongDialog
+          title={selected.song.title}
+          href={selected.song.links.delete.href}
+          token={token}
+          onClose={() => setSelected(null)}
+          onDeleted={handleDeleted}
+        />
       )}
     </>
   )

@@ -5,8 +5,8 @@ export type Song = {
   recordingPlace?: string | null
 }
 
-export type SongPage = {
-  items: Song[]
+export type SongPage<T extends Song = Song> = {
+  items: T[]
   page: number | string
   pageSize: number | string
   totalItems: number | string
