@@ -2,12 +2,13 @@ import { useState } from 'react'
 import SongList from '../catalog/SongList'
 import RowActions, { type RowAction } from '../components/RowActions'
 import { useToast } from '../components/useToast'
-import { Link, useLocation, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useApiResource } from '../songs/useApiResource'
 import AlbumSongPicker from './AlbumSongPicker'
 import type { Album, AlbumSong } from './types'
 import AlbumStatus from './AlbumStatus'
 import { useAlbumPublication } from './useAlbumPublication'
+import AlbumActions from './AlbumActions'
 
 export default function AlbumPage({ token }: { token?: string }) {
   const [revision, setRevision] = useState(0)
@@ -30,6 +31,7 @@ type AlbumDetailsProps = {
 function AlbumDetails({ token, onReload }: AlbumDetailsProps) {
   const { albumId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const catalogSearch = location.state?.catalogSearch
 
   const catalogLink = {
@@ -74,6 +76,9 @@ function AlbumDetails({ token, onReload }: AlbumDetailsProps) {
           initialAlbum={result.data}
           onReload={onReload}
           token={token}
+          onDeleted={() => {
+            void navigate(catalogLink, { replace: true })
+          }}
         />
       )}
     </main>
@@ -86,9 +91,10 @@ type AlbumContentProps = {
   initialAlbum: Album
   token?: string
   onReload: () => void
+  onDeleted: () => void
 }
 
-function AlbumContent({ initialAlbum, token, onReload }: AlbumContentProps) {
+function AlbumContent({ initialAlbum, token, onReload, onDeleted }: AlbumContentProps) {
  const [album, setAlbum] = useState(initialAlbum)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -255,12 +261,15 @@ function AlbumContent({ initialAlbum, token, onReload }: AlbumContentProps) {
             {album.title}
           </h1>
 
-          {albumActions.length > 0 && (
+          {token && (
             <div className="shrink-0">
-              <RowActions
-                label={`Albumo „${album.title}“ veiksmai`}
-                actions={albumActions}
+              <AlbumActions
+                album={album}
+                token={token}
+                publicationActions={albumActions}
                 disabled={busy}
+                onChanged={onReload}
+                onDeleted={onDeleted}
               />
             </div>
           )}

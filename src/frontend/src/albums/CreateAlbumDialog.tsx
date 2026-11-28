@@ -1,10 +1,7 @@
-import { useId, useRef, useState, type SubmitEvent } from 'react'
+import { useEffect, useId, useRef, useState, type SubmitEvent } from 'react'
 import { useToast } from '../components/useToast'
-
-type Props = {
-  token: string
-  onCreated: () => void
-}
+import { saveAlbum } from './albumApi'
+import type { Album } from './types'
 
 const primaryButton =
   'min-h-11 cursor-pointer rounded-lg bg-accent px-4 font-semibold text-on-accent ' +
@@ -13,21 +10,53 @@ const primaryButton =
 const fieldClass =
   'w-full rounded-lg border border-field-border bg-field px-3 py-2 text-ink'
 
-export default function CreateAlbumDialog({ token, onCreated }: Props) {
+type CreateProps = {
+  token: string
+  onCreated: () => void
+}
+
+export default function CreateAlbumDialog({ token, onCreated }: CreateProps) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={primaryButton}>
+        Sukurti albumą
+      </button>
+
+      {open && (
+        <AlbumFormDialog
+          token={token}
+          onClose={() => setOpen(false)}
+          onSaved={onCreated}
+        />
+      )}
+    </>
+  )
+}
+
+type FormProps = {
+  token: string
+  album?: Album
+  onClose: () => void
+  onSaved: () => void
+}
+
+export function AlbumFormDialog({ token, album, onClose, onSaved }: FormProps) {
   const dialog = useRef<HTMLDialogElement>(null)
   const headingId = useId()
   const notify = useToast()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  function openDialog() {
-    const element = dialog.current
-    if (!element) return
+  const proposing = album?.publicationStatus === 'Published'
+  const heading = proposing ? 'Siūlyti pakeitimus' : album ? 'Redaguoti albumą' : 'Naujas albumas'
+  const submitLabel = proposing ? 'Pateikti pakeitimus' : album ? 'Išsaugoti' : 'Sukurti albumą'
 
-    element.querySelector('form')?.reset()
-    setError('')
-    element.showModal()
-  }
+  useEffect(() => {
+    const element = dialog.current
+    if (element && !element.open) element.showModal()
+  }, [])
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -46,106 +75,88 @@ export default function CreateAlbumDialog({ token, onCreated }: Props) {
     setError('')
 
     try {
-      const response = await fetch('/api/Albums', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          description: description || null,
-          songIds: [],
-        }),
-      })
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setError('Sesija baigėsi. Prisijunk iš naujo.')
-        } else if (response.status === 400) {
-          setError('Patikrink albumo pavadinimą ir aprašymą.')
-        } else {
-          setError(`Albumo sukurti nepavyko (HTTP ${response.status}).`)
-        }
-        return
+      const result = await saveAlbum(token, title, description, album)
+      const message = {
+        created: `Albumas „${title}“ sukurtas.`,
+        updated: `Albumas „${title}“ atnaujintas.`,
+        proposed: 'Albumo pakeitimai pateikti moderatoriui peržiūrėti.',
       }
 
       dialog.current?.close()
-      notify('success', `Albumas „${title}“ sukurtas.`)
-      onCreated()
-    } catch {
-      setError(
-        'Nepavyko gauti serverio atsakymo. Prieš kartodamas patikrink „Mano“ albumų sąrašą.',
-      )
+      notify('success', message[result])
+      onSaved()
+    } catch (error) {
+      setError(error instanceof TypeError
+        ? 'Nepavyko gauti serverio atsakymo. Prieš kartodamas patikrink albumo būseną.'
+        : error instanceof Error ? error.message : 'Albumo išsaugoti nepavyko.')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <>
-      <button type="button" onClick={openDialog} className={primaryButton}>
-        Sukurti albumą
-      </button>
+    <dialog
+      ref={dialog}
+      aria-labelledby={headingId}
+      onClose={onClose}
+      onCancel={(event) => {
+        if (saving) event.preventDefault()
+      }}
+      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md
+                 overflow-y-auto rounded-xl border border-line bg-surface p-5
+                 text-ink backdrop:bg-black/60 md:p-7"
+    >
+      <h2 id={headingId} className="text-xl font-semibold">{heading}</h2>
 
-      <dialog
-        ref={dialog}
-        aria-labelledby={headingId}
-        onCancel={(event) => {
-          if (saving) event.preventDefault()
-        }}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md
-                   overflow-y-auto rounded-xl border border-line bg-surface p-5
-                   text-ink backdrop:bg-black/60 md:p-7"
-      >
-        <h2 id={headingId} className="text-xl font-semibold">Naujas albumas</h2>
+      {proposing && (
         <p className="mt-2 text-sm text-muted">
-          Albumas bus išsaugotas kaip juodraštis.
+          Pakeitimai taps vieši, kai juos patvirtins moderatorius.
         </p>
+      )}
+      {!album && <p className="mt-2 text-sm text-muted">Albumas bus išsaugotas kaip juodraštis.</p>}
 
-        <form onSubmit={handleSubmit} className="mt-5">
-          <fieldset disabled={saving} className="grid min-w-0 gap-4">
-            <label className="grid gap-1">
-              Pavadinimas (privaloma)
-              <input
-                name="title"
-                type="text"
-                required
-                maxLength={200}
-                autoFocus
-                className={`min-h-11 ${fieldClass}`}
-              />
-            </label>
+      <form onSubmit={handleSubmit} className="mt-5">
+        <fieldset disabled={saving} className="grid min-w-0 gap-4">
+          <label className="grid gap-1">
+            Pavadinimas (privaloma)
+            <input
+              name="title"
+              required
+              maxLength={200}
+              defaultValue={album?.title ?? ''}
+              autoFocus
+              className={`min-h-11 ${fieldClass}`}
+            />
+          </label>
 
-            <label className="grid gap-1">
-              Aprašymas (nebūtina)
-              <textarea
-                name="description"
-                rows={4}
-                maxLength={2000}
-                className={`resize-y ${fieldClass}`}
-              />
-            </label>
+          <label className="grid gap-1">
+            Aprašymas (nebūtina)
+            <textarea
+              name="description"
+              rows={4}
+              maxLength={2000}
+              defaultValue={album?.description ?? ''}
+              className={`resize-y ${fieldClass}`}
+            />
+          </label>
 
-            {error && <p role="alert" className="text-sm">{error}</p>}
+          {error && <p role="alert" className="text-sm">{error}</p>}
 
-            <div className="flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => dialog.current?.close()}
-                className="min-h-11 cursor-pointer rounded-lg border border-field-border
-                           px-4 hover:bg-hover disabled:cursor-wait disabled:opacity-60"
-              >
-                Atšaukti
-              </button>
-
-              <button type="submit" className={primaryButton}>
-                {saving ? 'Kuriama…' : 'Sukurti albumą'}
-              </button>
-            </div>
-          </fieldset>
-        </form>
-      </dialog>
-    </>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => dialog.current?.close()}
+              className="min-h-11 cursor-pointer rounded-lg border border-field-border
+                         px-4 hover:bg-hover disabled:cursor-wait"
+            >
+              Atšaukti
+            </button>
+            <button type="submit" className={primaryButton}>
+              {saving ? 'Siunčiama…' : submitLabel}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+    </dialog>
   )
 }

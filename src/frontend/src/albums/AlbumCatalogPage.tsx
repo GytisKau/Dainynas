@@ -7,9 +7,9 @@ import type { SongSearch } from '../catalog/types'
 import { useCatalogResults } from '../catalog/useCatalogResults'
 import type { Album, AlbumPageData } from './types'
 import CatalogViewNavigation from '../components/CatalogViewNavigation'
-import RowActions from '../components/RowActions'
 import AlbumStatus from './AlbumStatus'
 import { useAlbumPublication } from './useAlbumPublication'
+import AlbumActions from './AlbumActions'
 
 const publicKeys = new Set(['title', 'page', 'pageSize'])
 const mineKeys = new Set(['page', 'pageSize'])
@@ -224,6 +224,13 @@ function AlbumResults({ mine, token, search, revision, onNavigate }: ResultsProp
                 loading={status === 'loading'}
                 showStatus={mine}
                 onChanged={retry}
+                onDeleted={() => {
+                  if (data.items.length === 1 && search.page > 1) {
+                    onNavigate({ ...search, page: search.page - 1 })
+                  } else {
+                    retry()
+                  }
+                }}
               />
             ))}
           </ul>
@@ -256,10 +263,11 @@ type AlbumCatalogRowProps = {
   loading: boolean
   showStatus: boolean
   onChanged: () => void
+  onDeleted: () => void
 }
 
 function AlbumCatalogRow({
-  album, token, catalogSearch, loading, onChanged, showStatus,
+  album, token, catalogSearch, loading, onChanged, showStatus, onDeleted
 }: AlbumCatalogRowProps) {
   const { actions, publishing } = useAlbumPublication(album, token, loading, onChanged)
 
@@ -288,12 +296,15 @@ function AlbumCatalogRow({
         )}
       </Link>
 
-      {actions.length > 0 && (
+      {token && (
         <div className="relative z-10 mr-1">
-          <RowActions
-            label={`Albumo „${album.title}“ veiksmai`}
-            actions={actions}
+          <AlbumActions
+            album={album}
+            token={token}
+            publicationActions={actions}
             disabled={loading || publishing}
+            onChanged={onChanged}
+            onDeleted={onDeleted}
           />
         </div>
       )}
