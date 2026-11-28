@@ -6,10 +6,27 @@ import SongList from './SongList'
 import SongSearchForm from './SongSearchForm'
 import type { SongFilters, SongPage, SongSearch } from './types'
 import { useCatalogResults } from './useCatalogResults'
+import { useState } from 'react'
+import CreateSongDialog from '../songs/CreateSongDialog'
 
 export default function SongCatalogPage({ token }: { token?: string }) {
   const [params, setParams] = useSearchParams()
   const parsed = readSongCatalogQuery(params)
+  const [revision, setRevision] = useState(0)
+
+  function handleCreated() {
+    if (parsed.ok && parsed.mine && parsed.search.page === 1) {
+      setRevision((value) => value + 1)
+      return
+    }
+
+    const next = new URLSearchParams({ rodinys: 'mano' })
+    if (parsed.ok && parsed.search.pageSize !== 10) {
+      next.set('pageSize', String(parsed.search.pageSize))
+    }
+
+    setParams(next)
+  }
 
   function navigate(next: SongSearch) {
     const nextParams = toCatalogParams(next)
@@ -19,9 +36,13 @@ export default function SongCatalogPage({ token }: { token?: string }) {
 
   return (
     <main className="mx-auto w-full max-w-308 flex-1 px-4 pt-6 pb-8 md:pt-8">
-      <h1 className="mb-4 text-2xl font-semibold text-accent md:text-3xl">
-        Dainų katalogas
-      </h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-accent md:text-3xl">
+          Dainų katalogas
+        </h1>
+
+        {token && <CreateSongDialog token={token} onCreated={handleCreated} />}
+      </div>
 
       {!parsed.ok ? (
         <>
@@ -54,6 +75,7 @@ export default function SongCatalogPage({ token }: { token?: string }) {
               mine={parsed.mine}
               token={parsed.mine ? token : undefined}
               search={parsed.search}
+              revision={revision}
               onNavigate={navigate}
             />
           )}
@@ -67,16 +89,17 @@ type ResultsProps = {
   mine: boolean
   token?: string
   search: SongSearch
+  revision: number
   onNavigate: (next: SongSearch) => void
 }
 
-function CatalogResults({ mine, token, search, onNavigate }: ResultsProps) {
+function CatalogResults({ mine, token, search, revision, onNavigate }: ResultsProps) {
   const location = useLocation()
   const query = toCatalogParams(search).toString()
   const endpoint = mine ? '/api/Songs/mine' : '/api/Songs'
   const url = query ? `${endpoint}?${query}` : endpoint
 
-  const { catalog, showLoading, retry } = useCatalogResults<SongPage>(url, token)
+  const { catalog, showLoading, retry } = useCatalogResults<SongPage>(url, token, revision)
   const { data, status } = catalog
 
   function handleSearch(filters: SongFilters) {

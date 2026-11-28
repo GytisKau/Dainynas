@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react'
 import SongSearchFields from './SongSearchFields'
 import type { PerformerOption, SongSearchFormProps } from './types'
-
-type PerformerPage = {
-  items: PerformerOption[]
-  totalPages: number | string
-}
+import { loadPerformerOptions } from './loadPerformerOptions'
 
 export default function SongSearchForm(props: SongSearchFormProps) {
   const [performers, setPerformers] = useState<PerformerOption[]>([])
@@ -17,39 +13,15 @@ export default function SongSearchForm(props: SongSearchFormProps) {
     const controller = new AbortController()
 
     async function loadPerformers() {
-      const options: PerformerOption[] = []
-      let page = 1
-      let totalPages: number
-
       try {
-        do {
-          const params = new URLSearchParams({
-            page: String(page),
-            pageSize: '10',
-          })
+        const options = await loadPerformerOptions('public', controller.signal)
+        if (controller.signal.aborted) return
 
-          const response = await fetch(`/api/Performers?${params}`, {
-            headers: { Accept: 'application/json' },
-            signal: controller.signal,
-          })
-
-          if (!response.ok) throw new Error(`HTTP ${response.status}`)
-
-          const result: PerformerPage = await response.json()
-          options.push(...result.items)
-          totalPages = Number(result.totalPages)
-          page += 1
-        } while (page <= totalPages)
-
-        if (!controller.signal.aborted) {
-          options.sort((a, b) => a.name.localeCompare(b.name, 'lt'))
-          setPerformers(options)
-          setPerformerStatus('ready')
-        }
+        options.sort((a, b) => a.name.localeCompare(b.name, 'lt'))
+        setPerformers(options)
+        setPerformerStatus('ready')
       } catch {
-        if (!controller.signal.aborted) {
-          setPerformerStatus('error')
-        }
+        if (!controller.signal.aborted) setPerformerStatus('error')
       }
     }
 
