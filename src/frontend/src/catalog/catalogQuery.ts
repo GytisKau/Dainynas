@@ -61,3 +61,33 @@ export function toCatalogParams(search: SongSearch) {
 
   return params
 }
+
+const mySongKeys = new Set(['page', 'pageSize'])
+
+export function readSongCatalogQuery(params: URLSearchParams) {
+  const views = params.getAll('rodinys')
+
+  if (views.length > 1) {
+    return { ok: false, message: 'Parametras „rodinys“ nuorodoje pakartotas.' } as const
+  }
+
+  if (views.length === 1 && views[0] !== 'mano') {
+    return { ok: false, message: 'Nežinomas dainų katalogo rodinys.' } as const
+  }
+
+  const mine = views[0] === 'mano'
+  const filters = new URLSearchParams(params)
+  filters.delete('rodinys')
+
+  if (mine && ['title', 'year', 'performerId'].some((key) => filters.has(key))) {
+    return {
+      ok: false,
+      message: 'Filtrai pagal pavadinimą, metus ir pateikėją galimi viešų dainų rodinyje.',
+    } as const
+  }
+
+  const parsed = parseCatalogQuery(filters, mine ? mySongKeys : undefined)
+  if (!parsed.ok) return parsed
+
+  return { ok: true, mine, search: parsed.search } as const
+}

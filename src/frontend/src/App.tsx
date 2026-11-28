@@ -57,7 +57,10 @@ export default function App() {
 
       <Routes>
         {/* Dainos */}
-        <Route path="/" element={<SongCatalogPage />} />
+        <Route 
+          path="/" 
+          element={<SongCatalogPage token={session?.token} />} 
+        />
         <Route 
           path="/dainos/:songId" 
           element={<SongPage token={session?.token}/>}

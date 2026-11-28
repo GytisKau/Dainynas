@@ -13,11 +13,12 @@ type Props<T extends SongListItem> = {
   loading: boolean
   numbered?: boolean
   compact?: boolean
+  catalogSearch?: string
   renderAction?: (song: T, index: number) => ReactNode
 }
 
 export default function SongList<T extends SongListItem>({
-  songs, loading, numbered = false, compact = false, renderAction,
+  songs, loading, numbered = false, compact = false, catalogSearch, renderAction,
 }: Props<T>) {
   const List = numbered ? 'ol' : 'ul'
 
@@ -38,6 +39,7 @@ export default function SongList<T extends SongListItem>({
         >
           <Link
             to={`/dainos/${song.id}`}
+            state={catalogSearch === undefined ? undefined : { catalogSearch }}
             className={`flex min-w-0 self-stretch gap-3
                         after:absolute after:inset-0 after:z-0 after:content-['']
                         focus-visible:outline-none focus-visible:after:outline-2

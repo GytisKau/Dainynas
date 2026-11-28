@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useLocation } from 'react-router'
 import SongInfoCard from './SongInfoCard'
 import SongComments from './SongComments'
 import { ArchiveMedia } from './ArchiveMedia'
@@ -7,17 +7,24 @@ import type { SongDetails } from './types'
 
 export default function SongPage({ token }: { token?: string }) {
   const { songId } = useParams()
+  const location = useLocation()
   const song = useApiResource<SongDetails>(
     `/api/Songs/${encodeURIComponent(songId ?? '')}`,
     token,
   )
+  
+  const catalogSearch = location.state?.catalogSearch
+  const catalogLink = {
+    pathname: '/',
+    search: typeof catalogSearch === 'string' ? catalogSearch : '',
+  }
 
   return (
     <main className="mx-auto w-full max-w-308 flex-1 px-4 pt-6 pb-8">
       <nav aria-label="Naršymo kelias" className="mb-5 text-sm">
         <ol className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <li>
-            <Link to="/" className="text-accent underline underline-offset-4">
+            <Link to={catalogLink} className="text-accent underline underline-offset-4">
               Dainų katalogas
             </Link>
           </li>
