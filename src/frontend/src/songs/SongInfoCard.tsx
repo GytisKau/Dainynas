@@ -3,9 +3,15 @@ import type { PerformerDetails, SongDetails } from './types'
 import { useApiResource } from './useApiResource'
 import { ArchiveMedia, ArchiveNotice } from './ArchiveMedia'
 
-export default function SongInfoCard({ song }: { song: SongDetails }) {
+export default function SongInfoCard({
+  song, token,
+}: {
+  song: SongDetails
+  token?: string
+}) {
   const performer = useApiResource<PerformerDetails>(
     `/api/Performers/${song.performerId}`,
+    token,
   )
 
   const archiveUrl = song.externalArchiveUrl?.trim()

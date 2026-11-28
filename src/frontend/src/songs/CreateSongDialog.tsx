@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type SubmitEvent } from 'react'
 import { loadPerformerOptions } from '../catalog/loadPerformerOptions'
 import type { PerformerOption } from '../catalog/types'
 import { useToast } from '../components/useToast'
+import type { SongDetails } from './types'
 
 type Props = {
   token: string
@@ -32,7 +33,7 @@ export default function CreateSongDialog({ token, onCreated }: Props) {
       {open && (
         <SongFormDialog
           token={token}
-          onCreated={onCreated}
+          onSaved={onCreated}
           onClose={() => setOpen(false)}
         />
       )}
@@ -62,9 +63,14 @@ async function createPerformer(name: string, token: string): Promise<PerformerOp
   }
 }
 
-function SongFormDialog({
-  token, onCreated, onClose,
-}: Props & { onClose: () => void }) {
+type SongFormProps = {
+  token: string
+  song?: SongDetails
+  onSaved: () => void
+  onClose: () => void
+}
+
+export function SongFormDialog({ token, song, onSaved, onClose }: SongFormProps) {
   const dialog = useRef<HTMLDialogElement>(null)
   const headingId = useId()
   const notify = useToast()
@@ -75,6 +81,14 @@ function SongFormDialog({
 
   const [performerMode, setPerformerMode] = useState<'existing' | 'new'>('existing')
   const [createdPerformer, setCreatedPerformer] = useState<PerformerOption | null>(null)
+
+  const proposing = song?.publicationStatus === 'Published'
+  const [selectedPerformerId, setSelectedPerformerId] = useState(
+    song ? String(song.performerId) : '',
+  )
+
+  const heading = proposing ? 'Siūlyti dainos pakeitimus' : song ? 'Redaguoti dainą' : 'Nauja daina'
+  const submitLabel = proposing ? 'Pateikti pakeitimus' : song ? 'Išsaugoti pakeitimus' : 'Sukurti dainą'
 
   useEffect(() => {
     const element = dialog.current
@@ -88,7 +102,9 @@ function SongFormDialog({
       try {
         const [publicItems, myItems] = await Promise.all([
           loadPerformerOptions('public', controller.signal),
-          loadPerformerOptions('mine', controller.signal, token),
+          proposing
+            ? Promise.resolve([])
+            : loadPerformerOptions('mine', controller.signal, token),
         ])
 
         if (controller.signal.aborted) return
@@ -108,7 +124,7 @@ function SongFormDialog({
 
     void loadOptions()
     return () => controller.abort()
-  }, [token, attempt])
+  }, [token, attempt, proposing])
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -137,6 +153,23 @@ function SongFormDialog({
       return
     }
 
+    const update = song?.links.update
+
+    if (song && !update) {
+      setError('Šios dainos dabar redaguoti negalima.')
+      return
+    }
+
+    if (
+      performerMode === 'existing' &&
+      !createdPerformer &&
+      (options.status !== 'ready' ||
+        !options.items.some((person) => String(person.id) === String(performerId)))
+    ) {
+      setError('Pasirink pasiekiamą pateikėją iš sąrašo.')
+      return
+    }
+
     setSaving(true)
     setError('')
 
@@ -147,8 +180,8 @@ function SongFormDialog({
         setCreatedPerformer(performer)
       }
 
-      const response = await fetch('/api/Songs', {
-        method: 'POST',
+      const response = await fetch(update?.href ?? '/api/Songs', {
+        method: song ? 'PUT' : 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -164,22 +197,47 @@ function SongFormDialog({
         }),
       })
 
-      if (response.status !== 201) {
+      const saved = song
+        ? response.status === 204 || response.status === 202
+        : response.status === 201
+
+      if (!saved) {
         switch (response.status) {
           case 400:
-            throw new Error('Dainos išsaugoti nepavyko. Patikrink įvestus duomenis.')
+            throw new Error('Patikrink dainos laukus ir pasirinktą pateikėją.')
           case 401:
             throw new Error('Sesija baigėsi. Prisijunk iš naujo.')
+          case 403:
+            throw new Error('Neturi teisės redaguoti šios dainos.')
           case 404:
-            throw new Error('Pasirinktas pateikėjas nebepasiekiamas. Pasirink kitą.')
+            throw new Error('Daina arba pasirinktas pateikėjas nebepasiekiamas.')
+          case 409: {
+            const problem = await response.json().catch(() => null)
+            const reasons: Record<string, string> = {
+              'Song is awaiting moderation.': 'Daina jau laukia moderatoriaus sprendimo.',
+              'A public song requires a published performer.':
+                'Paskelbtai dainai pasirink paskelbtą pateikėją.',
+              'A moderation request already exists.':
+                'Šios dainos pakeitimai jau pateikti moderatoriui.',
+            }
+            throw new Error(reasons[problem?.message] ?? 'Dainos būsena pasikeitė. Atnaujink puslapį.')
+          }
           default:
-            throw new Error(`Dainos sukurti nepavyko (HTTP ${response.status}).`)
+            throw new Error(`Dainos išsaugoti nepavyko (HTTP ${response.status}).`)
         }
       }
 
       dialog.current?.close()
-      notify('success', `Daina „${title}“ išsaugota kaip juodraštis.`)
-      onCreated()
+
+      if (response.status === 202) {
+        notify('success', 'Dainos pakeitimai pateikti moderatoriui.')
+      } else {
+        notify('success', song
+          ? `Daina „${title}“ atnaujinta.`
+          : `Daina „${title}“ išsaugota kaip juodraštis.`)
+      }
+
+      onSaved()
     } catch (error) {
       if (error instanceof TypeError && !performerId) {
         // Serveris galėjo išsaugoti pateikėją, nors naršyklė negavo jo ID.
@@ -187,7 +245,7 @@ function SongFormDialog({
         setAttempt((value) => value + 1)
         setError('Negautas pateikėjo kūrimo atsakymas. Patikrink atnaujintą pateikėjų sąrašą.')
       } else if (error instanceof TypeError) {
-        setError('Negautas dainos kūrimo atsakymas. Prieš kartodamas patikrink „Mano“ dainų sąrašą.')
+        setError('Negautas dainos išsaugojimo atsakymas. Prieš kartodamas patikrink dainos būseną.')
       } else {
         setError(error instanceof Error ? error.message : 'Dainos išsaugoti nepavyko.')
       }
@@ -214,14 +272,23 @@ function SongFormDialog({
                  overflow-y-auto rounded-xl border border-line bg-surface p-5
                  text-ink backdrop:bg-black/60 md:p-7"
     >
-      <h2 id={headingId} className="text-xl font-semibold">Nauja daina</h2>
-      <p className="mt-2 text-sm text-muted">Daina bus išsaugota kaip juodraštis.</p>
+      <h2 id={headingId} className="text-xl font-semibold">{heading}</h2>
+
+      {proposing && (
+        <p className="mt-2 text-sm text-muted">
+          Pakeitimai taps vieši, kai juos patvirtins moderatorius.
+        </p>
+      )}
+
+      {!song && (
+        <p className="mt-2 text-sm text-muted">Daina bus išsaugota kaip juodraštis.</p>
+      )}
 
       <form onSubmit={handleSubmit} className="mt-5">
         <fieldset disabled={saving} className="grid min-w-0 gap-4">
           <label className="grid gap-1">
             Dainos pavadinimas (privaloma)
-            <input name="title" required maxLength={200} autoFocus className={fieldClass} />
+            <input name="title" required maxLength={200} autoFocus defaultValue={song?.title ?? ''} className={fieldClass} />
           </label>
 
           <fieldset className="grid min-w-0 gap-2">
@@ -249,6 +316,7 @@ function SongFormDialog({
               </div>
             ) : (
               <>
+                {!proposing && (
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                   <label className="inline-flex cursor-pointer items-center gap-2">
                     <input
@@ -278,6 +346,7 @@ function SongFormDialog({
                     Įvesti naują
                   </label>
                 </div>
+                )}
 
                 {performerMode === 'new' ? (
                   <label className="grid gap-1">
@@ -297,13 +366,21 @@ function SongFormDialog({
                       <select
                         name="performerId"
                         required
-                        defaultValue=""
+                        value={selectedPerformerId}
+                        onChange={(event) => setSelectedPerformerId(event.currentTarget.value)}                        
                         disabled={options.status !== 'ready' || options.items.length === 0}
                         className={fieldClass}
                       >
                         <option value="">
                           {options.status === 'loading' ? 'Įkeliami pateikėjai…' : 'Pasirink iš sąrašo'}
                         </option>
+                        {song && options.status === 'ready' &&
+                          !options.items.some((person) => String(person.id) === String(song.performerId)) && (
+                            <option value={String(song.performerId)} disabled>
+                              {song.performerName} (nepasiekiamas – pasirink kitą)
+                            </option>
+                          )
+                        }
                         {options.status === 'ready' && options.items.map((person) => (
                           <option key={person.id} value={String(person.id)}>{person.name}</option>
                         ))}
@@ -342,28 +419,28 @@ function SongFormDialog({
               Įrašymo metai
               <input
                 name="recordingYear" type="number" min={1800} max={2100}
-                step={1} className={fieldClass}
+                step={1} defaultValue={song?.recordingYear ?? ''} className={fieldClass}
               />
             </label>
             <label className="grid gap-1">
               Įrašymo vieta
-              <input name="recordingPlace" maxLength={200} className={fieldClass} />
+              <input name="recordingPlace" maxLength={200} defaultValue={song?.recordingPlace ?? ''} className={fieldClass} />
             </label>
           </div>
 
           <label className="grid gap-1">
             Dainos tekstas
-            <textarea name="lyrics" rows={4} className={`resize-y ${fieldClass}`} />
+            <textarea name="lyrics" rows={4} defaultValue={song?.lyrics ?? ''} className={`resize-y ${fieldClass}`} />
           </label>
 
           <label className="grid gap-1">
             Garso įrašo nuoroda
-            <input name="audioUrl" type="url" className={fieldClass} />
+            <input name="audioUrl" type="url" defaultValue={song?.audioUrl ?? ''} className={fieldClass} />
           </label>
 
           <label className="grid gap-1">
             Nuoroda į archyvą
-            <input name="externalArchiveUrl" type="url" className={fieldClass} />
+            <input name="externalArchiveUrl" type="url" defaultValue={song?.externalArchiveUrl ?? ''} className={fieldClass} />
           </label>
 
           {error && <p role="alert" className="text-sm">{error}</p>}
@@ -377,7 +454,7 @@ function SongFormDialog({
               Atšaukti
             </button>
             <button type="submit" disabled={!canSave} className={primaryButton}>
-              {saving ? 'Kuriama…' : 'Sukurti dainą'}
+              {saving ? 'Siunčiama…' : submitLabel}
             </button>
           </div>
         </fieldset>

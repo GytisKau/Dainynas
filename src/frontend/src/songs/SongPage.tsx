@@ -4,15 +4,32 @@ import SongComments from './SongComments'
 import { ArchiveMedia } from './ArchiveMedia'
 import { useApiResource } from './useApiResource'
 import type { SongDetails } from './types'
+import SongPublication from './SongPublication'
+import { useState } from 'react'
 
 export default function SongPage({ token }: { token?: string }) {
   const { songId } = useParams()
   const location = useLocation()
-  const song = useApiResource<SongDetails>(
+  const resource = useApiResource<SongDetails>(
     `/api/Songs/${encodeURIComponent(songId ?? '')}`,
     token,
   )
-  
+
+  const [latest, setLatest] = useState<{
+    original: SongDetails
+    updated: SongDetails
+  } | null>(null)
+
+  const song = resource.status === 'ready' && latest?.original === resource.data
+    ? { status: 'ready' as const, data: latest.updated }
+    : resource
+
+  function handleSongChanged(updated: SongDetails) {
+    if (resource.status === 'ready') {
+      setLatest({ original: resource.data, updated })
+    }
+  }
+
   const catalogSearch = location.state?.catalogSearch
   const catalogLink = {
     pathname: '/',
@@ -47,8 +64,8 @@ export default function SongPage({ token }: { token?: string }) {
 
       {song.status === 'ready' && (
         <div className="grid items-start gap-5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <SongContent song={song.data} />
-          <SongInfoCard song={song.data} />
+          <SongContent song={song.data} token={token} onSongChanged={handleSongChanged} />
+          <SongInfoCard song={song.data} token={token} />
 
           <div className="min-w-0 md:col-span-2">
             <SongComments
@@ -64,7 +81,13 @@ export default function SongPage({ token }: { token?: string }) {
   )
 }
 
-function SongContent({ song }: { song: SongDetails }) {
+function SongContent({
+  song, token, onSongChanged,
+}: {
+  song: SongDetails
+  token?: string
+  onSongChanged: (updated: SongDetails) => void
+}) {
   const recording = [song.recordingPlace, song.recordingYear]
     .filter((value) => value != null && value !== '')
     .join(' · ')
@@ -72,9 +95,12 @@ function SongContent({ song }: { song: SongDetails }) {
   return (
     <article className="min-w-0 rounded-xl border border-line bg-surface p-5 md:p-8">
       <header>
-        <h1 className="wrap-anywhere text-3xl font-semibold text-ink md:text-4xl">
-          {song.title}
-        </h1>
+        <SongPublication
+          key={song.id}
+          song={song}
+          token={token}
+          onSongChanged={onSongChanged}
+        />
         <p className="mt-2 text-lg text-ink">{song.performerName}</p>
         {recording && (
           <p className="mt-1 text-sm text-muted">Įrašyta: {recording}</p>

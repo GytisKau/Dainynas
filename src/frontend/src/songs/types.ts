@@ -6,6 +6,11 @@ export type SongDetails = Song & {
   lyrics?: string | null
   audioUrl?: string | null
   externalArchiveUrl?: string | null
+  publicationStatus: 'Draft' | 'Pending' | 'Published'
+  links: Partial<Record<'update' | 'submit' | 'unpublish', {
+    href: string
+    method: string
+  }>>
 }
 
 export type PerformerDetails = {

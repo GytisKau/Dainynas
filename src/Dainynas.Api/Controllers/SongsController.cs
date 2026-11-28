@@ -98,11 +98,14 @@ public class SongsController(DainynasDbContext context) : ControllerBase
 
             if (song.PublicationStatus == PublicationStatus.Draft)
             {
-                dto.Links["submit"] = new LinkDto
+                if (song.Performer.PublicationStatus == PublicationStatus.Published)
                 {
-                    Href = $"/api/songs/{song.Id}/submit",
-                    Method = "POST"
-                };
+                    dto.Links["submit"] = new LinkDto
+                    {
+                        Href = $"/api/songs/{song.Id}/submit",
+                        Method = "POST"
+                    };
+                }
 
                 dto.Links["delete"] = new LinkDto
                 {
