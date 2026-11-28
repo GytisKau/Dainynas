@@ -6,7 +6,8 @@ import { Link, useLocation, useParams } from 'react-router'
 import { useApiResource } from '../songs/useApiResource'
 import AlbumSongPicker from './AlbumSongPicker'
 import type { Album, AlbumSong } from './types'
-import { changeAlbumPublication, type AlbumPublicationAction } from './albumApi'
+import AlbumStatus from './AlbumStatus'
+import { useAlbumPublication } from './useAlbumPublication'
 
 export default function AlbumPage({ token }: { token?: string }) {
   const [revision, setRevision] = useState(0)
@@ -79,12 +80,6 @@ function AlbumDetails({ token, onReload }: AlbumDetailsProps) {
   )
 }
 
-const statusLabels = {
-  Draft: 'Juodraštis',
-  Pending: 'Laukia peržiūros',
-  Published: 'Paskelbtas',
-} as const
-
 const cardClass = 'min-w-0 rounded-xl border border-line bg-surface p-5 md:p-6'
 
 type AlbumContentProps = {
@@ -97,7 +92,12 @@ function AlbumContent({ initialAlbum, token, onReload }: AlbumContentProps) {
  const [album, setAlbum] = useState(initialAlbum)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [publishing, setPublishing] = useState(false)
+  const { actions: albumActions, publishing } = useAlbumPublication(
+    album,
+    token,
+    savingId !== null,
+    onReload,
+  )
   const notify = useToast()
   
   const busy = publishing || savingId !== null
@@ -208,47 +208,6 @@ function AlbumContent({ initialAlbum, token, onReload }: AlbumContentProps) {
     }
   }
 
-  async function publish(action: AlbumPublicationAction) {
-    const link = album.links[action]
-    if (!token || !link || busy) return
-
-    setPublishing(true)
-
-    try {
-      await changeAlbumPublication(link.href, action, token)
-    } catch (error) {
-      notify('error', error instanceof TypeError
-        ? 'Nepavyko gauti atsakymo. Prieš kartodamas veiksmą atnaujink albumą.'
-        : error instanceof Error ? error.message : 'Albumo būsenos pakeisti nepavyko.')
-      setPublishing(false)
-      return
-    }
-
-    notify('success', action === 'submit'
-      ? 'Albumas pateiktas peržiūrai.'
-      : 'Albumo paskelbimas atšauktas. Jis vėl yra juodraštis.')
-
-    onReload()
-  }
-
-  const albumActions: RowAction[] = []
-
-  if (token && album.links.submit) {
-    albumActions.push({
-      icon: 'submit',
-      label: 'Pateikti peržiūrai',
-      onSelect: () => void publish('submit'),
-    })
-  }
-
-  if (token && album.links.unpublish) {
-    albumActions.push({
-      icon: 'unpublish',
-      label: 'Atšaukti paskelbimą',
-      onSelect: () => void publish('unpublish'),
-    })
-  }
-
   function songActions(song: AlbumSong, index: number): RowAction[] {
     const actions: RowAction[] = []
 
@@ -285,8 +244,10 @@ function AlbumContent({ initialAlbum, token, onReload }: AlbumContentProps) {
     >
       <div className="grid min-w-0 content-start gap-5">
       <section aria-labelledby="album-title" className={cardClass}>
-        <p role="status" className="mb-2 text-sm font-medium text-accent">
-          {publishing ? 'Keičiama albumo būsena…' : statusLabels[album.publicationStatus]}
+        <p role="status" className="mb-2 text-sm text-muted">
+          {publishing
+            ? 'Keičiama albumo būsena…'
+            : <AlbumStatus status={album.publicationStatus} />}
         </p>
 
         <div className="flex items-center justify-between gap-3">

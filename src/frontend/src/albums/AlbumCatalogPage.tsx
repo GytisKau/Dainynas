@@ -5,8 +5,11 @@ import Pagination from '../catalog/Pagination'
 import { parseCatalogQuery, toCatalogParams } from '../catalog/catalogQuery'
 import type { SongSearch } from '../catalog/types'
 import { useCatalogResults } from '../catalog/useCatalogResults'
-import type { AlbumPageData } from './types'
+import type { Album, AlbumPageData } from './types'
 import CatalogViewNavigation from '../components/CatalogViewNavigation'
+import RowActions from '../components/RowActions'
+import AlbumStatus from './AlbumStatus'
+import { useAlbumPublication } from './useAlbumPublication'
 
 const publicKeys = new Set(['title', 'page', 'pageSize'])
 const mineKeys = new Set(['page', 'pageSize'])
@@ -103,7 +106,7 @@ export default function AlbumCatalogPage({ token }: { token?: string }) {
             <AlbumResults
               key={parsed.mine ? 'mine' : 'public'}
               mine={parsed.mine}
-              token={parsed.mine ? token : undefined}
+              token={token}
               search={parsed.search}
               revision={revision}
               onNavigate={navigate}
@@ -213,23 +216,15 @@ function AlbumResults({ mine, token, search, revision, onNavigate }: ResultsProp
             className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface"
           >
             {data.items.map((album) => (
-              <li key={album.id}>
-                <Link
-                  to={`/albumai/${album.id}`}
-                  state={{ catalogSearch: location.search }}
-                  className="grid gap-0.5 px-4 py-3 wrap-anywhere transition-colors hover:bg-hover focus-visible:bg-hover focus-visible:-outline-offset-2"
-                >
-                  <span className="text-xs font-medium text-accent">
-                    Dainų: {album.songs.length}
-                  </span>
-                  <span className="font-semibold text-ink">{album.title}</span>
-                  {album.description && (
-                    <span className="line-clamp-2 text-muted">
-                      {album.description}
-                    </span>
-                  )}
-                </Link>
-              </li>
+              <AlbumCatalogRow
+                key={album.id}
+                album={album}
+                token={token}
+                catalogSearch={location.search}
+                loading={status === 'loading'}
+                showStatus={mine}
+                onChanged={retry}
+              />
             ))}
           </ul>
 
@@ -251,5 +246,57 @@ function AlbumResults({ mine, token, search, revision, onNavigate }: ResultsProp
         </button>
       )}
     </>
+  )
+}
+
+type AlbumCatalogRowProps = {
+  album: Album
+  token?: string
+  catalogSearch: string
+  loading: boolean
+  showStatus: boolean
+  onChanged: () => void
+}
+
+function AlbumCatalogRow({
+  album, token, catalogSearch, loading, onChanged, showStatus,
+}: AlbumCatalogRowProps) {
+  const { actions, publishing } = useAlbumPublication(album, token, loading, onChanged)
+
+  return (
+    <li
+      className="relative isolate grid grid-cols-[minmax(0,1fr)_auto] items-center
+                 transition-colors has-[a:hover]:bg-hover has-[a:focus-visible]:bg-hover"
+    >
+      <Link
+        to={`/albumai/${album.id}`}
+        state={{ catalogSearch }}
+        className="grid min-w-0 gap-1 px-4 py-3 wrap-anywhere
+                   after:absolute after:inset-0 after:content-['']
+                   focus-visible:outline-none focus-visible:after:outline-2
+                   focus-visible:after:-outline-offset-2 focus-visible:after:outline-accent"
+      >
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {showStatus && <AlbumStatus status={album.publicationStatus} />}
+          <span className="text-xs text-muted">Dainų: {album.songs.length}</span>
+        </span>
+
+        <span className="font-semibold text-ink">{album.title}</span>
+
+        {album.description && (
+          <span className="line-clamp-2 text-sm text-muted">{album.description}</span>
+        )}
+      </Link>
+
+      {actions.length > 0 && (
+        <div className="relative z-10 mr-1">
+          <RowActions
+            label={`Albumo „${album.title}“ veiksmai`}
+            actions={actions}
+            disabled={loading || publishing}
+          />
+        </div>
+      )}
+    </li>
   )
 }
